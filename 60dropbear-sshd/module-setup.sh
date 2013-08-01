@@ -33,7 +33,7 @@ depends() {
 }
 
 install() {
-	local tmp_file
+	local tmp_file tmp_fifo
 
 	dracut_install /lib/libnss_files.so.2
 	inst $(which dropbear) /sbin/dropbear
@@ -45,18 +45,19 @@ install() {
 		#  dropbearkey, so use that one. It's interactive-only, hence some hacks.
 		dropbear_rsa_key=$(mktemp)
 		tmp_file=$(mktemp)
-		rm -f ${dropbear_rsa_key}
-		ssh-keygen -q -t rsa -b 2048 -f "${dropbear_rsa_key}" </dev/null >${tmp_file} 2>&1
-		[[ ! -f "${dropbear_rsa_key}" || ! -f "${dropbear_rsa_key}".pub ]] && {
+		rm -f "${dropbear_rsa_key}"
+		tmp_fifo=$(mktemp) && rm -f "${tmp_fifo}" && mkfifo -m0600 "${tmp_fifo}"
+		script -q -c "ssh-keygen -q -t rsa -b 2048 -f '${dropbear_rsa_key}'; echo >'${tmp_fifo}'"\
+			</dev/null >"${tmp_file}" 2>&1
+		: <"${tmp_fifo}"; rm -f "${tmp_fifo}"
+		[[ -f "${dropbear_rsa_key}" && -f "${dropbear_rsa_key}".pub ]] || {
 			dfatal "Failed to generate ad-hoc ssh key, see: ${tmp_file}"
 			rm -f "${dropbear_rsa_key}"{,.pub}
 			return 255
 		}
 
-		dinfo "Generated ad-hoc ssh key"
-		dinfo "  fingerprint: $(ssh-keygen -l -f "${dropbear_rsa_key}".pub)"
-		dinfo "  bubblebabble: $(ssh-keygen -B -f "${dropbear_rsa_key}".pub)"
-		rm -f "${dropbear_rsa_key}".pub
+		dinfo "Generated ad-hoc ssh key for dropbear on boot"
+		rm -f "${tmp_file}"
 		tmp_file=${dropbear_rsa_key}
 
 		# Might benefit from *securely* creating such tempfiles.
@@ -67,8 +68,13 @@ install() {
 			|| { dfatal "dropbearconvert failed"; rm -f "${dropbear_rsa_key}"{,.tmp}; return 255; }
 		rm -f "${dropbear_rsa_key}".tmp
 	}
+	local key_fp=$(ssh-keygen -l -f "${dropbear_rsa_key}".pub)
+	local key_bb=$(ssh-keygen -B -f "${dropbear_rsa_key}".pub)
+	dinfo "Boot SSH key parameters:"
+	dinfo "  fingerprint: ${key_fp}"
+	dinfo "  bubblebabble: ${key_bb}"
 	inst "${dropbear_rsa_key}" /etc/dropbear/host_key
-	[[ -n "${tmp_file}" ]] && rm -f "${tmp_file}"
+	[[ -n "${tmp_file}" ]] && rm -f "${tmp_file}"{,.pub}
 
 	[[ -z "${dropbear_acl}" ]] && dropbear_acl=/root/.ssh/authorized_keys
 	inst "${dropbear_acl}" /root/.ssh/authorized_keys
@@ -87,11 +93,18 @@ install() {
 	[[ -z "${dropbear_port}" ]] && dropbear_port=2222
 	tmp_file=$(mktemp)
 	echo >"${tmp_file}" "#!/bin/sh"
-	echo >>"${tmp_file}" "exec /sbin/dropbear"\
+	echo >>"${tmp_file}" "info \"Starting Dropbear SSH\""
+	echo >>"${tmp_file}" "info \"  sshd key fingerprint: ${key_fp}\""
+	echo >>"${tmp_file}" "info \"  sshd key bubblebabble: ${key_bb}\""
+	echo >>"${tmp_file}" "/sbin/dropbear"\
 		"-E -m -s -j -k -p ${dropbear_port} -r /etc/dropbear/host_key"
+	echo >>"${tmp_file}" 'info "Dropbear sshd died (exit code: $?)"'
 	chmod +x "${tmp_file}"
-	inst_hook initqueue 20 "${tmp_file}"
-	rm -f "${tmp_file}"
+
+	# Dracut only runs *.sh files in initqueue dir
+	mv "${tmp_file}"{,.sh}
+	inst_hook initqueue 20 "${tmp_file}".sh
+	rm -f "${tmp_file}".sh
 
 	return 0
 }

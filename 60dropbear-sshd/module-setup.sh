@@ -28,7 +28,7 @@ check() {
 }
 
 depends() {
-	echo network crypt
+	echo network
 	return 0
 }
 
@@ -41,18 +41,31 @@ install() {
 	# Don't bother with DSA, as it's either much more fragile or broken anyway
 	tmp_file=
 	[[ -z "$dropbear_rsa_key" ]] && {
+		# I assume ssh-keygen must be better at producing good rsa keys than
+		#  dropbearkey, so use that one. It's interactive-only, hence some hacks.
 		dropbear_rsa_key=$(mktemp)
-		tmp_file=${dropbear_rsa_key}
-		# ssh-keygen is not meant for batch usage, hence the hacks
-		rm -f dropbear_rsa_key
-		ssh-keygen -q -t rsa -b 2048 -f "${dropbear_rsa_key}" </dev/null >/dev/null 2>&1
+		tmp_file=$(mktemp)
+		rm -f ${dropbear_rsa_key}
+		ssh-keygen -q -t rsa -b 2048 -f "${dropbear_rsa_key}" </dev/null >${tmp_file} 2>&1
 		[[ ! -f "${dropbear_rsa_key}" || ! -f "${dropbear_rsa_key}".pub ]] && {
-			derror "Failed to generate ad-hoc ssh key."
+			dfatal "Failed to generate ad-hoc ssh key, see: ${tmp_file}"
+			rm -f "${dropbear_rsa_key}"{,.pub}
 			return 255
 		}
+
 		dinfo "Generated ad-hoc ssh key"
 		dinfo "  fingerprint: $(ssh-keygen -l -f "${dropbear_rsa_key}".pub)"
 		dinfo "  bubblebabble: $(ssh-keygen -B -f "${dropbear_rsa_key}".pub)"
+		rm -f "${dropbear_rsa_key}".pub
+		tmp_file=${dropbear_rsa_key}
+
+		# Might benefit from *securely* creating such tempfiles.
+		mv "${dropbear_rsa_key}"{,.tmp}
+		# Oh, wow, another tool that doesn't have "batch mode" in the same script.
+		# It's deeply concerning that security people don't seem to grasp such basic concepts.
+		dropbearconvert openssh dropbear "${dropbear_rsa_key}"{.tmp,} >/dev/null 2>&1\
+			|| { dfatal "dropbearconvert failed"; rm -f "${dropbear_rsa_key}"{,.tmp}; return 255; }
+		rm -f "${dropbear_rsa_key}".tmp
 	}
 	inst "${dropbear_rsa_key}" /etc/dropbear/host_key
 	[[ -n "${tmp_file}" ]] && rm -f "${tmp_file}"
@@ -76,6 +89,7 @@ install() {
 	echo >"${tmp_file}" "#!/bin/sh"
 	echo >>"${tmp_file}" "exec /sbin/dropbear"\
 		"-E -m -s -j -k -p ${dropbear_port} -r /etc/dropbear/host_key"
+	chmod +x "${tmp_file}"
 	inst_hook initqueue 20 "${tmp_file}"
 	rm -f "${tmp_file}"
 

@@ -27,8 +27,7 @@ int main (int argc, const char * argv[]) {
 
 	passphrase = getpass(prompt);
 
-	for (const char * str = passphrase; *str; ++str)
-		ioctl(fd, TIOCSTI, str);
+	for (const char * str = passphrase; *str; ++str) ioctl(fd, TIOCSTI, str);
 	ioctl(fd, TIOCSTI, "\r");
 
 	// clear string immediately

@@ -40,7 +40,7 @@ install() {
 
 	# Don't bother with DSA, as it's either much more fragile or broken anyway
 	tmp_file=
-	[[ -z "$dropbear_rsa_key" ]] && {
+	[[ -z "${dropbear_rsa_key}" ]] && {
 		# I assume ssh-keygen must be better at producing good rsa keys than
 		#  dropbearkey, so use that one. It's interactive-only, hence some hacks.
 		dropbear_rsa_key=$(mktemp)

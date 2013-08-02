@@ -48,7 +48,7 @@ install() {
 		rm -f "${dropbear_rsa_key}"
 		tmp_fifo=$(mktemp) && rm -f "${tmp_fifo}" && mkfifo -m0600 "${tmp_fifo}"
 		script -q -c "ssh-keygen -q -t rsa -b 2048 -f '${dropbear_rsa_key}'; echo >'${tmp_fifo}'"\
-			</dev/null >"${tmp_file}" 2>&1
+			/dev/null </dev/null >"${tmp_file}" 2>&1
 		: <"${tmp_fifo}"; rm -f "${tmp_fifo}"
 		[[ -f "${dropbear_rsa_key}" && -f "${dropbear_rsa_key}".pub ]] || {
 			dfatal "Failed to generate ad-hoc ssh key, see: ${tmp_file}"

@@ -85,14 +85,14 @@ install() {
 	cat >"$tmp"/sshd_run.sh <<EOF
 #!/bin/sh
 [ -f /tmp/dropbear.pid ]\
-	&& kill 0 \$(cat /tmp/dropbear.pid) 2>/dev/null && exit 0
-info 'sshd port: ${dropbear_port}'
-info 'sshd key fingerprint: ${key_fp}'
-info 'sshd key bubblebabble: ${key_bb}'
-/sbin/dropbear -E -m -s -j -k -p ${dropbear_port}\
-	-r /etc/dropbear/host_key -d - -P /tmp/dropbear.pid
-[ \$? -gt 0 ] && { info 'Dropbear sshd failed to start'; exit 1; }
-exit 0
+		&& kill 0 \$(cat /tmp/dropbear.pid) 2>/dev/null || {
+	info 'sshd port: ${dropbear_port}'
+	info 'sshd key fingerprint: ${key_fp}'
+	info 'sshd key bubblebabble: ${key_bb}'
+	/sbin/dropbear -E -m -s -j -k -p ${dropbear_port}\
+		-r /etc/dropbear/host_key -d - -P /tmp/dropbear.pid
+	[ \$? -gt 0 ] && info 'Dropbear sshd failed to start'
+}
 EOF
 	cat >"$tmp"/sshd_kill.sh <<EOF
 #!/bin/sh

@@ -19,6 +19,10 @@ fairly similar to openssh).
 
 ### Usage
 
+First of all, needs dropbear (at least sshd, I tested only version built without
+pam support, both static and shared should work) and gcc installed (to build
+auth.c tool).
+
 - Copy or symlink `60dropbear-sshd` into `/usr/lib/dracut/modules.d/`.
 
 - Add `dracutmodules+="dropbear-sshd"` to dracut.conf
@@ -146,6 +150,10 @@ before host or dropbear failed to start/listen.
 If there's no "SSH-2.0-dropbear_..." after "Connected to ..." line - some issue
 with dropbear.
 
+- `lastlog_perform_login: Couldn't stat /var/log/lastlog: No such file or directory`
+
+Pops up when logging in, can be safely ignored.
+
 
 ### Debugging tips
 
@@ -199,6 +207,8 @@ naming mixup, no traffic (e.g. unrelated connection issue), etc.
 
 - Uses plenty of insecure tempfiles on initramfs build, should probably use
   tempdir with all these safely inside.
+
+- Some pre-pivot hook should cleanup (kill) sshd pid.
 
 - Does `gcc -std=gnu99 -O2 -Wall "$moddir"/auth.c -o "${tmp_file}"` for that
   "console_auth" binary on dracut run, that should probably be done when

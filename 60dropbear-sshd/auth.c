@@ -2,7 +2,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
 #include <string.h>
@@ -16,11 +15,6 @@ const char *prompt="Passphrase: ";
 int main (int argc, const char * argv[]) {
 	char *passphrase;
 	int i;
-
-	if (argc != 1) {
-		printf("Usage: auth\n");
-		return 1;
-	}
 
 	int fd = open("/dev/console", O_RDONLY);
 	if (fd < 0) return 2;

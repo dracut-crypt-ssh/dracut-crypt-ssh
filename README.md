@@ -99,9 +99,7 @@ Passphrase:
 Boot should continue after last command, which should send entered passphrase to
 cryptsetup, waiting for it on the console, assuming its correctness.
 
-sshd might keep running, unless killed by networking changes or agressive init
-system cleanup.
-Some pre-pivot hook killing it should probably be added, so it won't be the case.
+sshd should be killed during dracut "cleanup" phase, once main os init is about to run.
 
 
 ### dracut.conf parameters
@@ -205,11 +203,6 @@ naming mixup, no traffic (e.g. unrelated connection issue), etc.
 
 ### Bad things
 
-- Uses plenty of insecure tempfiles on initramfs build, should probably use
-  tempdir with all these safely inside.
-
-- Some pre-pivot hook should cleanup (kill) sshd pid.
-
 - Does `gcc -std=gnu99 -O2 -Wall "$moddir"/auth.c -o "${tmp_file}"` for that
   "console_auth" binary on dracut run, that should probably be done when
   installed into dracut's modules.d or maybe there is good packaged substitute
@@ -219,12 +212,12 @@ naming mixup, no traffic (e.g. unrelated connection issue), etc.
   ([Exherbo](http://exherbo.org/)), no idea how easy it is to use with generic
   debian or ubuntu.
 
-- check() in module_setup.sh should probably not be empty no-op.
+- `check()` in module_setup.sh should probably not be empty no-op.
 
 - Should probably have `set -e` or something alike (dracut-specific?) in install().
 
-- No idea how to sanely run `ssh-keygen` (openssh) from a script, maybe it
-  shouldn't be?
+- No idea how to sanely run `ssh-keygen` (openssh) from a script, maybe use
+  openssl instead?
 
 - Some notes on threat model where such thing might be useful would be nice, so
   people won't assume too much.

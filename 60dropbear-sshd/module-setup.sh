@@ -33,48 +33,40 @@ depends() {
 }
 
 install() {
-	local tmp_file tmp_fifo
+	local tmp=$(mktemp -d --tmpdir dracut-crypt-sshd.XXXX)
 
 	dracut_install /lib/libnss_files.so.2
 	inst $(which dropbear) /sbin/dropbear
 
 	# Don't bother with DSA, as it's either much more fragile or broken anyway
-	tmp_file=
 	[[ -z "${dropbear_rsa_key}" ]] && {
 		# I assume ssh-keygen must be better at producing good rsa keys than
 		#  dropbearkey, so use that one. It's interactive-only, hence some hacks.
-		dropbear_rsa_key=$(mktemp)
-		tmp_file=$(mktemp)
+		dropbear_rsa_key="$tmp"/key
 		rm -f "${dropbear_rsa_key}"
-		tmp_fifo=$(mktemp) && rm -f "${tmp_fifo}" && mkfifo -m0600 "${tmp_fifo}"
-		script -q -c "ssh-keygen -q -t rsa -b 2048 -f '${dropbear_rsa_key}'; echo >'${tmp_fifo}'"\
-			/dev/null </dev/null >"${tmp_file}" 2>&1
-		: <"${tmp_fifo}"; rm -f "${tmp_fifo}"
+		mkfifo "$tmp"/keygen.fifo
+		script -q -c "ssh-keygen -q -t rsa -f '${dropbear_rsa_key}'; echo >'${tmp}/keygen.fifo'"\
+			/dev/null </dev/null >"$tmp"/keygen.log 2>&1
+		: <"$tmp"/keygen.fifo
 		[[ -f "${dropbear_rsa_key}" && -f "${dropbear_rsa_key}".pub ]] || {
-			dfatal "Failed to generate ad-hoc ssh key, see: ${tmp_file}"
-			rm -f "${dropbear_rsa_key}"{,.pub}
+			dfatal "Failed to generate ad-hoc rsa key, see: ${tmp}/keygen.log"
 			return 255
 		}
+		dinfo "Generated ad-hoc rsa key for dropbear sshd in initramfs"
 
-		dinfo "Generated ad-hoc ssh key for dropbear on boot"
-		rm -f "${tmp_file}"
-		tmp_file=${dropbear_rsa_key}
-
-		# Might benefit from *securely* creating such tempfiles.
-		mv "${dropbear_rsa_key}"{,.tmp}
 		# Oh, wow, another tool that doesn't have "batch mode" in the same script.
 		# It's deeply concerning that security people don't seem to grasp such basic concepts.
+		mv "${dropbear_rsa_key}"{,.tmp}
 		dropbearconvert openssh dropbear "${dropbear_rsa_key}"{.tmp,} >/dev/null 2>&1\
-			|| { dfatal "dropbearconvert failed"; rm -f "${dropbear_rsa_key}"{,.tmp}; return 255; }
-		rm -f "${dropbear_rsa_key}".tmp
+			|| { dfatal "dropbearconvert failed"; rm -rf "$tmp"; return 255; }
 	}
+
 	local key_fp=$(ssh-keygen -l -f "${dropbear_rsa_key}".pub)
 	local key_bb=$(ssh-keygen -B -f "${dropbear_rsa_key}".pub)
 	dinfo "Boot SSH key parameters:"
 	dinfo "  fingerprint: ${key_fp}"
 	dinfo "  bubblebabble: ${key_bb}"
 	inst "${dropbear_rsa_key}" /etc/dropbear/host_key
-	[[ -n "${tmp_file}" ]] && rm -f "${tmp_file}"{,.pub}
 
 	[[ -z "${dropbear_acl}" ]] && dropbear_acl=/root/.ssh/authorized_keys
 	inst "${dropbear_acl}" /root/.ssh/authorized_keys
@@ -85,29 +77,31 @@ install() {
 
 	# Helper to safely send password to cryptsetup on /dev/console without echoing it.
 	# Yeah, dracut modules shouldn't compile stuff, but I'm not packaging that separately.
-	tmp_file=$(mktemp)
-	gcc -std=gnu99 -O2 -Wall "$moddir"/auth.c -o "${tmp_file}"
-	inst "${tmp_file}" /bin/console_auth
-	rm -f "${tmp_file}"
+	gcc -std=gnu99 -O2 -Wall "$moddir"/auth.c -o "$tmp"/auth
+	inst "$tmp"/auth /bin/console_auth
 
+	# Generate hooks right here, with parameters baked-in
 	[[ -z "${dropbear_port}" ]] && dropbear_port=2222
-	tmp_file=$(mktemp)
-	echo >"${tmp_file}" "#!/bin/sh"
-	echo >>"${tmp_file}" '[ -f /tmp/dropbear.pid ]'\
-		'&& kill 0 $(cat /tmp/dropbear.pid) 2>/dev/null && exit 0'
-	echo >>"${tmp_file}" "info \"sshd port: ${dropbear_port}\""
-	echo >>"${tmp_file}" "info \"sshd key fingerprint: ${key_fp}\""
-	echo >>"${tmp_file}" "info \"sshd key bubblebabble: ${key_bb}\""
-	echo >>"${tmp_file}" "/sbin/dropbear -E -m -s -j -k -p ${dropbear_port}"\
-		"-r /etc/dropbear/host_key -d - -P /tmp/dropbear.pid"
-	echo >>"${tmp_file}" '[ $? -gt 0 ] && { info "Dropbear sshd failed to start"; exit 1; }'
-	echo >>"${tmp_file}" 'exit 0'
-	chmod +x "${tmp_file}"
+	cat >"$tmp"/sshd_run.sh <<EOF
+#!/bin/sh
+[ -f /tmp/dropbear.pid ]\
+	&& kill 0 \$(cat /tmp/dropbear.pid) 2>/dev/null && exit 0
+info 'sshd port: ${dropbear_port}'
+info 'sshd key fingerprint: ${key_fp}'
+info 'sshd key bubblebabble: ${key_bb}'
+/sbin/dropbear -E -m -s -j -k -p ${dropbear_port}\
+	-r /etc/dropbear/host_key -d - -P /tmp/dropbear.pid
+[ \$? -gt 0 ] && { info 'Dropbear sshd failed to start'; exit 1; }
+exit 0
+EOF
+	cat >"$tmp"/sshd_kill.sh <<EOF
+#!/bin/sh
+[ -f /tmp/dropbear.pid ] && kill \$(cat /tmp/dropbear.pid) 2>/dev/null
+EOF
+	chmod +x "$tmp"/sshd_{run,kill}.sh
+	inst_hook initqueue 20 "$tmp"/sshd_run.sh
+	inst_hook cleanup 05 "$tmp"/sshd_kill.sh
 
-	# Dracut only runs *.sh files in initqueue dir
-	mv "${tmp_file}"{,.sh}
-	inst_hook initqueue 20 "${tmp_file}".sh
-	rm -f "${tmp_file}".sh
-
+	rm -rf "$tmp"
 	return 0
 }

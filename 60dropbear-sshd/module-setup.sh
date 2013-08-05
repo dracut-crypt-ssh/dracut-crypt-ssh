@@ -93,12 +93,15 @@ install() {
 	[[ -z "${dropbear_port}" ]] && dropbear_port=2222
 	tmp_file=$(mktemp)
 	echo >"${tmp_file}" "#!/bin/sh"
-	echo >>"${tmp_file}" "info \"Starting Dropbear SSH\""
-	echo >>"${tmp_file}" "info \"  sshd key fingerprint: ${key_fp}\""
-	echo >>"${tmp_file}" "info \"  sshd key bubblebabble: ${key_bb}\""
-	echo >>"${tmp_file}" "/sbin/dropbear"\
-		"-E -m -s -j -k -p ${dropbear_port} -r /etc/dropbear/host_key"
-	echo >>"${tmp_file}" 'info "Dropbear sshd died (exit code: $?)"'
+	echo >>"${tmp_file}" '[ -f /tmp/dropbear.pid ]'\
+		'&& kill 0 $(cat /tmp/dropbear.pid) 2>/dev/null && exit 0'
+	echo >>"${tmp_file}" "info \"sshd port: ${dropbear_port}\""
+	echo >>"${tmp_file}" "info \"sshd key fingerprint: ${key_fp}\""
+	echo >>"${tmp_file}" "info \"sshd key bubblebabble: ${key_bb}\""
+	echo >>"${tmp_file}" "/sbin/dropbear -E -m -s -j -k -p ${dropbear_port}"\
+		"-r /etc/dropbear/host_key -d - -P /tmp/dropbear.pid"
+	echo >>"${tmp_file}" '[ $? -gt 0 ] && { info "Dropbear sshd failed to start"; exit 1; }'
+	echo >>"${tmp_file}" 'exit 0'
 	chmod +x "${tmp_file}"
 
 	# Dracut only runs *.sh files in initqueue dir

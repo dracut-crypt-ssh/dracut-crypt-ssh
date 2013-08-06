@@ -17,10 +17,10 @@
 #  no password auth, no port forwarding
 #
 # In dropbear shell:
-#  # See what's on the console
-#  cat /dev/vcs1
+#  # See what's on the console ("cat /dev/vcs1" should work too)
+#  console_peek
 #  # Read and send password to console
-#  auth
+#  console_auth
 #
 
 check() {
@@ -35,8 +35,9 @@ depends() {
 install() {
 	local tmp=$(mktemp -d --tmpdir dracut-crypt-sshd.XXXX)
 
-	dracut_install /lib/libnss_files.so.2
+	dracut_install setterm /lib/libnss_files.so.2
 	inst $(which dropbear) /sbin/dropbear
+	inst "$moddir"/console_peek.sh /bin/console_peek
 
 	# Don't bother with DSA, as it's either much more fragile or broken anyway
 	[[ -z "${dropbear_rsa_key}" ]] && {

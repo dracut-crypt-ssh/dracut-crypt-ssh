@@ -88,18 +88,18 @@ Once inside:
 
 ```console
 
-% cat /dev/vcs1   # to see what's on the console (e.g. which dev prompt is for)
+% console_peek   # to see what's on the console (e.g. which dev prompt is for)
+...
 % console_auth    # queries passphrase and sends it to console
 Passphrase:
 %
 ```
 
-(something like `sed 's/    \+/\n/g' /dev/vcs1` might be more readable than `cat /dev/vcs1`)
-
 Boot should continue after last command, which should send entered passphrase to
 cryptsetup, waiting for it on the console, assuming its correctness.
 
 sshd should be killed during dracut "cleanup" phase, once main os init is about to run.
+Connection won't be closed, but nothing should work there, as initramfs gets destroyed.
 
 
 ### dracut.conf parameters

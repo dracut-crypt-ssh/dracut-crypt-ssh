@@ -35,7 +35,7 @@ depends() {
 install() {
 	local tmp=$(mktemp -d --tmpdir dracut-crypt-sshd.XXXX)
 
-	dracut_install setterm /lib/libnss_files.so.2
+	dracut_install pkill setterm /lib/libnss_files.so.2
 	inst $(which dropbear) /sbin/dropbear
 	inst "$moddir"/console_peek.sh /bin/console_peek
 
@@ -97,7 +97,10 @@ install() {
 EOF
 	cat >"$tmp"/sshd_kill.sh <<EOF
 #!/bin/sh
-[ -f /tmp/dropbear.pid ] && kill \$(cat /tmp/dropbear.pid) 2>/dev/null
+[ -f /tmp/dropbear.pid ] || exit 0
+main_pid=\$(cat /tmp/dropbear.pid)
+kill \${main_pid} 2>/dev/null
+pkill -P \${main_pid}
 EOF
 	chmod +x "$tmp"/sshd_{run,kill}.sh
 	inst_hook initqueue 20 "$tmp"/sshd_run.sh

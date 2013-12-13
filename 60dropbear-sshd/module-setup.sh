@@ -98,9 +98,11 @@ EOF
 	cat >"$tmp"/sshd_kill.sh <<EOF
 #!/bin/sh
 [ -f /tmp/dropbear.pid ] || exit 0
-main_pid=\$(cat /tmp/dropbear.pid)
-kill \${main_pid} 2>/dev/null
+read main_pid </tmp/dropbear.pid
+kill -STOP \${main_pid} 2>/dev/null
 pkill -P \${main_pid}
+kill \${main_pid} 2>/dev/null
+kill -CONT \${main_pid} 2>/dev/null
 EOF
 	chmod +x "$tmp"/sshd_{run,kill}.sh
 	inst_hook initqueue 20 "$tmp"/sshd_run.sh

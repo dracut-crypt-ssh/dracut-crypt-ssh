@@ -86,7 +86,7 @@ install() {
 	cat >"$tmp"/sshd_run.sh <<EOF
 #!/bin/sh
 [ -f /tmp/dropbear.pid ]\
-		&& kill 0 \$(cat /tmp/dropbear.pid) 2>/dev/null || {
+		&& kill -0 \$(cat /tmp/dropbear.pid) 2>/dev/null || {
 	info 'sshd port: ${dropbear_port}'
 	info 'sshd key fingerprint: ${key_fp}'
 	info 'sshd key bubblebabble: ${key_bb}'

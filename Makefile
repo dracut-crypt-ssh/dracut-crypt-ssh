@@ -1,5 +1,5 @@
 
-export VERSION=1.0.1
+export VERSION=1.0.2
 
 export OLDDRACUT=0
 export LIBDIR=/lib

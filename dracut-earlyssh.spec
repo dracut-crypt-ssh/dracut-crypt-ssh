@@ -6,10 +6,10 @@
 
 Summary: A dracut module that adds ssh to the boot image (also known as earlyssh)
 Name: dracut-earlyssh
-Version: 1.0.1
+Version: 1.0.2
 Release: 1
 License: GPL
-Source: dracut-earlyssh-1.0.1.tgz
+Source: dracut-earlyssh-%{version}.tgz
 Packager: Michael Curtis <michael@moltenmercury.org>
 BuildRequires: dracut
 BuildRequires: libblkid-devel

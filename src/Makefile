@@ -6,8 +6,11 @@ CFLAGS=-std=gnu99 -O2 -Wall
 
 all: console_auth unlock
 
+test:	crypttab-test
+	
+
 clean:
-	rm -f *.o console_auth unlock
+	rm -f *.o console_auth unlock crypttab-test
 
 install:	console_auth unlock
 	mkdir -p $(INSTDIR)
@@ -19,3 +22,6 @@ console_auth:	auth.c
 unlock:	crypttab.o unlock.o
 	gcc -lblkid $^ -o $@
 
+crypttab-test: crypttab-test.c crypttab.o crypttab-test-data
+	gcc crypttab-test.c $(CFLAGS) crypttab.o -lblkid -o crypttab-test
+	./crypttab-test

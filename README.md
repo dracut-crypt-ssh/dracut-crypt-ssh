@@ -116,8 +116,8 @@ Boot should continue after last command, which should send entered passphrase to
 cryptsetup, waiting for it on the console, assuming its correctness.
 
 ### Remote unlock using the 'unlock' binary
-The unlock binary takes a passphrase in stdin, reads /etc/crypttab and attempts to
-call cryptsetup luksOpen on all luks-encrypted drives that don't have a keyfile,
+The `unlock` binary takes a passphrase in stdin, reads `/etc/crypttab` and attempts to
+call `cryptsetup luksOpen` on all luks-encrypted drives that don't have a keyfile,
 passing the passphrase that unlock got in stdin to luksOpen.
 
 What this means in practise is you can do:
@@ -129,12 +129,30 @@ or:
 % gpg -d password.gpg | ssh root@remote.server -p 2222 unlock
 ```
 
-unlock will kill cryptroot-ask on receipt of the password, which allows the
-boot process to continue.  Providing the root partition was unlocked
-succesfully, the server will then boot.  Note that unlock is still very much in beta,
-and it will unconditionally kill cryptroot-ask, even if the decryption fails. This might
-leave you in a state where you are forced to reboot the server in order to try again - please
-don't use this in production just yet.
+If you want to only unlock specific drives / LUKS volumes, you can provide wildcards on the 
+command line, eg
+```console
+% ssh root@remote.server -p 2222 unlock luks-3467c luks-34c13
+```
+`unlock` will search the crypttab for mapper names (first column in /etc/crypttab) that
+start with the listed names.  Volumes that match via this method may have a keyfile listed
+in /etc/crypttab, it will be assumed that you want to unlock the volume/s with an alternative key.
+Note that the names provided are really wildcards, and by convention/default all mappers start with luks-,
+so you can force `unlock` to try all drives simply by doing something like `unlock luks-`.
+
+In all cases, `unlock` will only consider the process a success IFF all eligible volumes are unlocked
+successfully.  This means:
+  1. All the associated devices must be available at boot / unlock time
+  2. The passphrase must be accepted for all eligible volumes
+  3. cryptsetup luksOpen should not exit for any other reason.
+
+In short, if you have more than one volume in /etc/crypttab, you will need to be careful
+about how use this tool.
+
+If the process is successful, `unlock` will kill cryptroot-ask, which, at least on RHEL,
+forces the boot process to proceed.  Note that the plymouth splash screen (if you happen to be
+watching the console...) will still appear to ask for your password, but this is an artificat.
+Disable plymouth (rhgb command line) if this annoys you.
 
 ### dracut.conf parameters
 

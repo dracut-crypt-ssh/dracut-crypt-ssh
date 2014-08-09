@@ -1,6 +1,8 @@
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/mman.h>
+
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,11 +19,12 @@ static const char *kNoKeyFile = "none";
 int runchild( const char *input, int inputSize, const char *path, char *const args[] )
 {
 	int childStdin[ 2 ] = { -1, -1 };
-	pid_t childPid = -1;
 
 	pipe( childStdin );
 
-	childPid = fork();
+	pid_t childPid = fork();
+
+	int childStatus;
 
 	if( childPid == 0 ) { // We are the child
 		close( 0 );
@@ -37,15 +40,84 @@ int runchild( const char *input, int inputSize, const char *path, char *const ar
 		write( childStdin[ 1 ], input, inputSize );
 		close( childStdin[ 1 ] );
 
-		waitpid( childPid, NULL, 0 );
+		waitpid( childPid, &childStatus, 0 );
 	}
 
-	return 0;
+	if( WIFEXITED( childStatus ) ) {
+		return WEXITSTATUS( childStatus );
+	} else {
+		return 1;
+	}
 }
 
-int main( int argc, char ** argv )
+int main( int argc, const char ** argv )
 {
+	int numProvidedNames = argc - 1;
+	const char **providedNames = argv + 1;
+	
 	struct crypttab crypttab = crypttab_parse( kCrypttabPath );
+	if( crypttab.size == 0 ) {
+		fprintf( stderr, "/etc/crypttab is empty or invalid\n" );
+		return 254;
+	}
+
+	int *unlockList = calloc( crypttab.size, sizeof( int ) );
+	if( !unlockList ) {
+		fprintf( stderr, "Could not allocate memory\n" );
+		return 255;
+	}
+
+	int devicesToUnlock = 0;
+	int errorExit = 0;
+
+	if( numProvidedNames > 0 ) {
+		for( int providedName = 0; providedName < numProvidedNames; ++providedName ) {
+			const char *name = providedNames[ providedName ];
+			int found = 0;
+
+			for( int entryIdx = 0; entryIdx < crypttab.size; ++entryIdx ) {
+				struct crypttab_entry *entry = crypttab.entries + entryIdx;
+				if( strncmp( name, entry->mapper, strlen( name ) ) == 0 ) {
+					unlockList[ entryIdx ] = 1;
+					found = 1;
+					++devicesToUnlock;
+					break;
+				}
+			}
+	
+			if( !found ) {
+				fprintf( stderr, "LUKS device matching '%s' not found in /etc/crypttab\n", name );
+				errorExit = 1;
+			}
+		}
+	} else {
+		// Unless provided with a specific list of devices to unlock, 
+		// only open devices that don't require a keyfile
+		for( int entryIdx = 0; entryIdx < crypttab.size; ++entryIdx ) {
+			struct crypttab_entry *entry = crypttab.entries + entryIdx;
+			if( strcmp( entry->keyfile, kNoKeyFile ) == 0 ) {
+				unlockList[ entryIdx ] = 1;
+				++devicesToUnlock;
+			}
+		}
+	}
+
+	if( devicesToUnlock == 0 ) {
+		fprintf( stderr, "Error: No decryptable devices found!\n" );
+		errorExit = 1;
+	}
+
+	if( errorExit ) {
+		free( unlockList );
+		crypttab_free( &crypttab );
+
+		return 1;
+	}
+
+	if( !mlockall( MCL_FUTURE ) ) {
+		fprintf( stderr, "Warning: Unable to lock memory, are you root?\n" );
+	}
+
 
 	char password[ kPasswordSize ];
 	int passwordSize = 0;
@@ -61,17 +133,16 @@ int main( int argc, char ** argv )
 	}
 	
 	crypttab_lookupblkids( &crypttab );
-
+	
 	for( int entryIdx = 0; entryIdx < crypttab.size; ++entryIdx ) {
 		struct crypttab_entry *entry = crypttab.entries + entryIdx;
 
-		if( strcmp( entry->keyfile, kNoKeyFile ) != 0 ) {
-			continue;
-		}
+		if( !unlockList[ entryIdx ] ) continue;
 
 		if( strncmp( kDevPath, entry->real_device, strlen( kDevPath ) ) != 0 ) {
-			fprintf( stderr, "Warning: device '%s' not found\n", entry->device );
-			continue;
+			fprintf( stderr, "Error: disk device '%s' not found\n", entry->device );
+			errorExit = 1;
+			break;
 		}
 
 		// Right, now we have something to unlock
@@ -84,14 +155,25 @@ int main( int argc, char ** argv )
 			NULL
 		};
 
-		runchild( password, passwordSize, path, args );
+		int result = runchild( password, passwordSize, path, args );
+		if( result ) {
+			fprintf( stderr, "Could not open %s (%s)\n", entry->mapper, entry->real_device );
+			errorExit = 1;
+			break;
+		}
 	}
 
 	crypttab_free( &crypttab );
+	free( unlockList );
 
-	system( "pkill cryptroot-ask" );
+	// Clear any record of password from RAM
+	memset( password, '\0', kPasswordSize );
 
-	return 0;
+	if( !errorExit ) {
+		system( "pkill cryptroot-ask" );
+	}
+
+	return errorExit;
 }
 
 	

@@ -1,0 +1,145 @@
+#!/bin/bash
+
+#
+# Based on code, examples and ideas from:
+#  https://bugzilla.redhat.com/show_bug.cgi?id=524727
+#  http://roosbertl.blogspot.de/2012/12/centos6-disk-encryption-with-remote.html
+#  https://bitbucket.org/bmearns/dracut-crypt-wait
+#
+# Start dropbear sshd to be able to send password to waiting cryptsetup
+#  (from "crypt" module) remotely, or for any other kind of net-debug of dracut.
+#
+# Boot sshd will be started with:
+#  port: ${dropbear_port} (dracut.conf) or 2222
+#  user: root
+#  host key: ${dropbear_rsa_key} (dracut.conf) or generated (fingerprint echoed)
+#  client key(s): ${dropbear_acl} (dracut.conf) or /root/.ssh/authorized_keys
+#  no password auth, no port forwarding
+#
+# In dropbear shell:
+#  # See what's on the console ("cat /dev/vcs1" should work too)
+#  console_peek
+#  # Read and send password to console
+#  console_auth
+#
+
+check() {	
+	return 0
+}
+
+depends() {
+	echo network
+	return 0
+}
+
+install() {
+	local tmp=$(mktemp -d --tmpdir dracut-crypt-sshd.XXXX)
+	local ROOTHOME=@ROOTHOME@
+	local OLDDRACUT=@OLDDRACUT@
+
+	# Defaults
+	[[ -z "${dropbear_rsa_key}" ]] && dropbear_rsa_key=GENERATE
+	[[ -z "${dropbear_port}" ]] && dropbear_port=2222
+	[[ -z "${dropbear_acl}" ]] && dropbear_acl=/root/.ssh/authorized_keys
+
+	dracut_install pkill setterm /@LIBDIR@/libnss_files.so.2
+	inst $(which dropbear) /sbin/dropbear
+
+	# Helper to safely send password to cryptsetup on /dev/console without echoing it.
+	inst /usr/libexec/dracut-earlyssh/console_auth /bin/console_auth
+	# Helper to automatically unlock all crypted devices in crypttab using password on stdin
+	#  Designed for use with automated ssh helpers
+	inst /usr/libexec/dracut-earlyssh/unlock	/bin/unlock
+	inst ${moddir}/console_peek.sh /bin/console_peek
+
+	# Don't bother with DSA, as it's either much more fragile or broken anyway
+	local rsa_key="$tmp"/key
+	
+	case ${dropbear_rsa_key} in
+		GENERATE )
+			# I assume ssh-keygen must be better at producing good rsa keys than
+			#  dropbearkey, so use that one. It's interactive-only, hence some hacks.
+		
+			rm -f "${rsa_key}" "${rsa_key}".ossh
+			mkfifo "$tmp"/keygen.fifo
+			script -q -c "ssh-keygen -q -t rsa -f '${rsa_key}'; echo >'${tmp}/keygen.fifo'"\
+				/dev/null </dev/null >"$tmp"/keygen.log 2>&1
+			: <"$tmp"/keygen.fifo
+			[[ -f "${rsa_key}" && -f "${rsa_key}".pub ]] || {
+				derror "Failed to generate ad-hoc rsa key, see: ${tmp}/keygen.log"
+				return 255
+			}
+		
+			mv "${rsa_key}".ossh
+			dinfo "Generated ad-hoc rsa key for dropbear sshd in initramfs"
+			;;
+		SYSTEM )
+			local sys_rsa_key=/etc/ssh/ssh_host_rsa_key
+			[[ -f ${sys_rsa_key} && -f ${sys_rsa_key} ]] || {
+				derror "Cannot locate a system SSH host key in ${sys_rsa_key}"
+				derror "Start OpenSSH for the first time or use ssh-keygen to generate one"
+				return 255
+			}
+			cp ${sys_rsa_key} ${rsa_key}.ossh
+			cp ${sys_rsa_key}.pub ${rsa_key}.pub
+			;;
+		* )
+			[[ -f ${dropbear_rsa_key} && -f ${dropbear_rsa_key}.pub ]] || {
+				derror "User specified dropbear RSA location ${dropbear_rsa_key} or associated public key not found"
+				return 255
+			}
+			cp "${dropbear_rsa_key}" ${rsa_key}
+			cp "${dropbear_rsa_key}".pub ${rsa_key}.pub
+	esac
+
+	[[ -f ${rsa_key}.ossh ]] && {
+		# Oh, wow, another tool that doesn't have "batch mode" in the same script.
+		# It's deeply concerning that security people don't seem to grasp such basic concepts.
+		dropbearconvert openssh dropbear ${rsa_key}.ossh "${rsa_key}" >/dev/null 2>&1\
+			|| { derror "dropbearconvert failed"; rm -rf "$tmp"; return 255; }
+	}
+
+	local key_fp=$(ssh-keygen -l -f "${rsa_key}".pub)
+	local key_bb=$(ssh-keygen -B -f "${rsa_key}".pub)
+	dinfo "Boot SSH key parameters:"
+	dinfo "  fingerprint: ${key_fp}"
+	dinfo "  bubblebabble: ${key_bb}"
+	inst "${rsa_key}" /etc/dropbear/dropbear_rsa_host_key
+
+	inst "${dropbear_acl}" ${ROOTHOME}/.ssh/authorized_keys
+
+	# glibc needs only /etc/passwd with "root" entry (no group or shadow), which
+	#  should be provided by 99base; /bin/sh will be run regardless of /etc/shells presence.
+	# It can do without nsswitch.conf, resolv.conf or whatever other stuff it usually has.
+
+	[[ ${OLDDRACUT} -eq 1 ]] && inst $moddir/dummyroot /sbin/dummyroot
+	inst_rules 50-udev-pty.rules
+	
+	# Generate hooks right here, with parameters baked-in
+	cat >"$tmp"/sshd_run.sh <<EOF
+#!/bin/sh
+[ -f /tmp/dropbear.pid ]\
+		&& kill -0 \$(cat /tmp/dropbear.pid) 2>/dev/null || {
+	info 'sshd port: ${dropbear_port}'
+	info 'sshd key fingerprint: ${key_fp}'
+	info 'sshd key bubblebabble: ${key_bb}'
+	/sbin/dropbear -E -m -s -j -k -p ${dropbear_port} -d - -P /tmp/dropbear.pid
+	[ \$? -gt 0 ] && info 'Dropbear sshd failed to start'
+}
+EOF
+	cat >"$tmp"/sshd_kill.sh <<EOF
+#!/bin/sh
+[ -f /tmp/dropbear.pid ] || exit 0
+read main_pid </tmp/dropbear.pid
+kill -STOP \${main_pid} 2>/dev/null
+pkill -P \${main_pid}
+kill \${main_pid} 2>/dev/null
+kill -CONT \${main_pid} 2>/dev/null
+EOF
+	chmod +x "$tmp"/sshd_{run,kill}.sh
+	inst_hook pre-udev 99 "$tmp"/sshd_run.sh
+	inst_hook pre-pivot 05 "$tmp"/sshd_kill.sh
+
+	rm -rf "$tmp"
+	return 0
+}

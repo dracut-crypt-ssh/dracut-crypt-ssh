@@ -1,29 +1,48 @@
-dracut-crypt-sshd
---------------------
+dracut-earlyssh
+---------------
 
 [Dracut initramfs](https://dracut.wiki.kernel.org/index.php/Main_Page) module
 to start [Dropbear sshd](https://matt.ucc.asn.au/dropbear/dropbear.html)
-on early boot to enter encryption passphrase from across the internets or just
-connect and debug whatever stuff there.
+on early boot to enter encryption passphrase remotely or just
+connect and debug.
 
-Idea is to use the thing on remote VDS servers, where full-disk encryption is
-still desirable (if only to avoid data leaks when disks will be decomissioned
-and sold by VDS vendor) but rather problematic due to lack of KVM or whatever
-direct console access.
+There are a number of reasons why you would want to do this:
+ 1. It provides a way of entering the encryption keys for a number of servers without
+    console switching
+ 2. It allows remote booting of (externally-hosted) encrypted servers
 
-Authenticates users strictly by provided authorized_keys ("dropbear_acl" option) file.
+This is based heavily on the work of others, in particular mk-fg.  The major changes between
+this version are: adaption for RHEL 6 and the old version of dracut installed there;
+additional options for replicated the system host key or a user provided one (see the
+"dropbear_rsa_key" option, documented in earlyssh.conf); an additional utility (unlock)
+for automating the unlock process.  Finally, there is a RPM spec file which should make
+it very easy to deploy (and doesn't introduce a runtime dependency on a compiler).
+
+Users are strictly authenticated by provided SSH public keys. These can be either:
+root's ~/.ssh/authorized_keys or a custom file ("dropbear_acl" option).
 
 See dropbear(8) manpage for full list of supported restrictions there (which are
-fairly similar to openssh).
+fairly similar to openssh).  If using in combination with the unlock utility (see below), a useful
+restriction may be to make /bin/unlock a 'forced command' in SSH.
 
 
 ### Usage
 
-First of all, needs dropbear (at least sshd, I tested only version built without
-pam support, both static and shared should work) and gcc installed (to build
-auth.c tool).
+First of all, you must have dropbear. CentOS/RHEL users can get this from EPEL.  
 
-- Copy or symlink `60dropbear-sshd` into `/usr/lib/dracut/modules.d/`.
+You will need gcc and libblkid(-devel) installed to build console_auth and the unlock tools.
+
+- You should be able to build everything by running make/make install.  There
+  are some additional variables to make that you may need to override.
+  These are
+	OLDDRACUT	Defaults to 0, set to 1 if using an old version of Dracut (e.g. 004)
+	ROOTHOME	root's home on the initrd. On RHEL6 this is /, Exherbo apparently /root
+			Note that this is NOT the same as root's home in the normal system!
+	LIBDIR		On RHEL6 and above /lib64, otherwise /lib
+  For example (RHEL6):
+	make OLDDRACUT=1 ROOTHOME=/ LIBDIR=/lib64 install
+
+- The provided RPM spec file should take care of these things for RHEL6/7
 
 - Add `dracutmodules+="dropbear-sshd"` to dracut.conf
   (will pull in "network" module as dependency).
@@ -36,19 +55,13 @@ auth.c tool).
 - See dracut.cmdline(7) manpage for info on how to setup "network" module
   (otherwise sshd is kinda useless).
 
-  Simpliest way might be just passing `ip=dhcp rd.neednet=1` on cmdline, if dhcp
+  Simplest way might be just passing `ip=dhcp rd.neednet=1` on cmdline, if dhcp
   can assign predictable ip and pass proper routes.
 
-  Example of luks (uuid starts with "7a476ea0") + lvm (vg named "lvmcrypt", with lv
-  there having fs with "root" label) + static-net (see manpage above for syntax)
-  grub.cfg entry (wrapped for readability):
-
-        menuentry "My Linux" {
-          linux /vmlinuz ro root=LABEL=root
-            rd.luks.uuid=7a476ea0 rd.lvm.vg=lvmcrypt rd.neednet=1
-            ip=88.195.61.177::88.195.61.161:255.255.255.224:myhost:enp0s9:off
-          initrd /dracut.xz
-        }
+  On older Dracut's, a more tortuous route is required.  Networking is only configured
+  if you have configured a network root.  In order to work around this, the system will
+  install a dummyroot script (if OLDDRACUT=1 at build-time).  The cmdline for these versions
+  should be `ip=dhcp netroot=dummy`. 
 
 - Run dracut to build initramfs with the thing.
 
@@ -84,7 +97,11 @@ Shell is /bin/sh, which should be
 probably be replaced with ash (busybox) or bash (heavy) using appropriate modules.
 
 
-Once inside:
+After the system starts booting, sshd should be killed during dracut "cleanup" phase, once 
+main os init is about to run.  Connection won't be closed, but nothing should work there, 
+as initramfs gets destroyed.
+
+### Remote unlock via console manipulation:
 
 ```console
 
@@ -98,9 +115,26 @@ Passphrase:
 Boot should continue after last command, which should send entered passphrase to
 cryptsetup, waiting for it on the console, assuming its correctness.
 
-sshd should be killed during dracut "cleanup" phase, once main os init is about to run.
-Connection won't be closed, but nothing should work there, as initramfs gets destroyed.
+### Remote unlock using the 'unlock' binary
+The unlock binary takes a passphrase in stdin, reads /etc/crypttab and attempts to
+call cryptsetup luksOpen on all luks-encrypted drives that don't have a keyfile,
+passing the passphrase that unlock got in stdin to luksOpen.
 
+What this means in practise is you can do:
+```console
+% ssh root@remote.server -p 2222 unlock < passwordFile
+```
+or:
+```console
+% gpg -d password.gpg | ssh root@remote.server -p 2222 unlock
+```
+
+unlock will kill cryptroot-ask on receipt of the password, which allows the
+boot process to continue.  Providing the root partition was unlocked
+succesfully, the server will then boot.  Note that unlock is still very much in beta,
+and it will unconditionally kill cryptroot-ask, even if the decryption fails. This might
+leave you in a state where you are forced to reboot the server in order to try again - please
+don't use this in production just yet.
 
 ### dracut.conf parameters
 
@@ -203,10 +237,6 @@ naming mixup, no traffic (e.g. unrelated connection issue), etc.
 
 ### Bad things
 
-- Does `gcc -std=gnu99 -O2 -Wall "$moddir"/auth.c -o "${tmp_file}"` for that
-  "console_auth" binary on dracut run, that should probably be done when
-  installed into dracut's modules.d or maybe there is good packaged substitute
-  for that ad-hoc binary.
 
 - Only tested with customized source-based distro
   ([Exherbo](http://exherbo.org/)), no idea how easy it is to use with generic

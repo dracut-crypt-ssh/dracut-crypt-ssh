@@ -1,0 +1,128 @@
+#!/bin/bash
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --print-moduledir)
+      [[ -f config.mk ]] && source config.mk
+      [[ -z $DRACUT_MODULEDIR ]] && exit 1
+      echo $DRACUT_MODULEDIR
+      exit 0
+      ;;
+    --dracut)
+      DRACUT=$2
+      shift
+      ;;
+    --root-home)
+      ROOTHOME=$2
+      shift
+      ;;
+  esac
+  shift
+done
+
+echo -n "Searching for dracut... "
+if [[ -z $DRACUT ]]; then
+  DRACUT=$(which dracut)
+  if [[ $? -eq 0 ]]; then
+    echo $DRACUT
+  else
+    echo "not found"
+    exit 1
+  fi
+else
+  echo "[provided] $DRACUT"
+fi
+
+echo -n "Checking dracut version... "
+DRACUT_VERSION=$(${DRACUT} --help | egrep "Version:[ \t]+[0-9]+" | egrep -o [0-9]+)
+if [[ $? -ne 0 ]]; then
+	echo -n "[old version - fallback] "
+	DRACUT_VERSION=004
+else
+	DRACUT_VERSION=$(echo ${DRACUT_VERSION} | cut -f 1 -d " ")
+fi
+echo ${DRACUT_VERSION}
+
+echo -n "Checking dracut module prefix... "
+DRACUT_MODULEDIR=""
+if [[ -d /usr/lib/dracut/modules.d ]]; then
+	DRACUT_MODULEDIR=lib/dracut/modules.d
+elif [[ -d /usr/share/dracut/modules.d ]]; then
+	DRACUT_MODULEDIR=share/dracut/modules.d
+else
+	echo "failed"
+	exit 1
+fi
+echo ${DRACUT_MODULEDIR}
+
+NEED_CRYPTSETTLE=0
+CRYPTPARSE=/usr/${DRACUT_MODULEDIR}/90crypt/parse-crypt.sh
+if [[ -f $CRYPTPARSE ]]; then
+  echo -n "Checking whether crypt-settle patch is needed... "
+  grep -c -- "--settled" ${CRYPTPARSE} >/dev/null
+  if [[ $? -ne 0 ]]; then
+    NEED_CRYPTSETTLE=1
+    echo "yes"
+  else
+    echo "no"
+  fi
+fi
+
+echo -n "Checking for old-style modules... "
+OLDSTYLE=1
+if [[ -f /usr/${DRACUT_MODULEDIR}/99base/module-setup.sh ]]; then
+  OLDSTYLE=0
+  echo "no"
+else
+  echo "yes"
+fi
+
+echo -n "Checking for root's home... "
+if [[ -z ${ROOTHOME} ]]; then
+  ROOTHOME=/
+  module=module-setup.sh
+  [[ ${OLDSTYLE} -eq 1 ]] && module=install
+  MODULEBASE=/usr/${DRACUT_MODULEDIR}/99base/${module}
+  if [[ -f $MODULEBASE ]]; then
+    grep -c "root:" ${MODULEBASE} >/dev/null
+    if [[ $? -eq 0 ]]; then
+      ROOTHOME=/root
+    fi
+  fi
+else
+  echo -n "[provided] "
+fi
+echo ${ROOTHOME}
+
+
+echo -n "Checking for libnss_files.so ... "
+DIRS="/usr/lib /usr/lib64 /lib64 /lib"
+NSSFILES=""
+for dir in ${DIRS}; do
+  for check in ${dir}/libnss_files.so*; do
+    if [[ -f $check ]]; then
+      NSSFILES=${check}
+      break
+    fi
+  done
+done
+if [[ -z $NSSFILES ]]; then
+  echo "not found"
+  exit 1
+else
+  echo $NSSFILES
+fi
+
+OLDDRACUT=0
+[[ $DRACUT_VERSION -le 4 ]] && OLDDRACUT=1
+
+cat >config.mk <<EOF
+export DRACUT=${DRACUT}
+export DRACUT_VERSION=${DRACUT_VERSION}
+export DRACUT_MODULEDIR=${DRACUT_MODULEDIR}
+export NEED_CRYPTSETTLE=${NEED_CRYPTSETTLE}
+export ROOTHOME=${ROOTHOME}
+export OLDSTYLE=${OLDSTYLE}
+export NSSFILES=${NSSFILES}
+export OLDDRACUT=${OLDDRACUT}
+EOF

@@ -19,11 +19,12 @@ for automating the unlock process.  Finally, there is a RPM spec file which shou
 it very easy to deploy (and doesn't introduce a runtime dependency on a compiler).
 
 Users are strictly authenticated by provided SSH public keys. These can be either:
-root's ~/.ssh/authorized_keys or a custom file ("dropbear_acl" option).
+root's ~/.ssh/authorized_keys or a custom file ("dropbear_acl" option).  Depending
+on your environment, it may make sense to make the preboot authorized_keys file
+quite different to the normal one.
 
 See dropbear(8) manpage for full list of supported restrictions there (which are
-fairly similar to openssh).  If using in combination with the unlock utility (see below), a useful
-restriction may be to make /bin/unlock a 'forced command' in SSH.
+fairly similar to openssh).  If using in combination with the unlock utility (see below), a useful restriction may be to make /bin/unlock a 'forced command' in SSH.
 
 
 ### Usage
@@ -32,15 +33,8 @@ First of all, you must have dropbear. CentOS/RHEL users can get this from EPEL.
 
 You will need gcc and libblkid(-devel) installed to build console_auth and the unlock tools.
 
-- You should be able to build everything by running make/make install.  There
-  are some additional variables to make that you may need to override.
-  These are
-	OLDDRACUT	Defaults to 0, set to 1 if using an old version of Dracut (e.g. 004)
-	ROOTHOME	root's home on the initrd. On RHEL6 this is /, Exherbo apparently /root
-			Note that this is NOT the same as root's home in the normal system!
-	LIBDIR		On RHEL6 and above /lib64, otherwise /lib
-  For example (RHEL6):
-	make OLDDRACUT=1 ROOTHOME=/ LIBDIR=/lib64 install
+- You should be able to build everything by running configure, make, make install as usual.
+  The configure script should detect and compensate for the various differences in dracut versions.
 
 - The provided RPM spec file should take care of these things for RHEL6/7
 
@@ -58,10 +52,10 @@ You will need gcc and libblkid(-devel) installed to build console_auth and the u
   Simplest way might be just passing `ip=dhcp rd.neednet=1` on cmdline, if dhcp
   can assign predictable ip and pass proper routes.
 
-  On older Dracut's, a more tortuous route is required.  Networking is only configured
-  if you have configured a network root.  In order to work around this, the system will
-  install a dummyroot script (if OLDDRACUT=1 at build-time).  The cmdline for these versions
-  should be `ip=dhcp netroot=dummy`. 
+  On older Dracut versions (e.g. 004 in RHEL6), networking is only configured
+  if you have configured a network root.  In order to work around this, dracut-earlyssh
+  system will install a dummyroot script (if it detects dracut v004 at build-time).
+  The cmdline for these versions should be `ip=dhcp netroot=dummy`. 
 
 - Run dracut to build initramfs with the thing.
 
@@ -120,7 +114,7 @@ The `unlock` binary takes a passphrase in stdin, reads `/etc/crypttab` and attem
 call `cryptsetup luksOpen` on all luks-encrypted drives that don't have a keyfile,
 passing the passphrase that unlock got in stdin to luksOpen.
 
-What this means in practise is you can do:
+What this means in practice is you can do:
 ```console
 % ssh root@remote.server -p 2222 unlock < passwordFile
 ```
@@ -149,10 +143,11 @@ successfully.  This means:
 In short, if you have more than one volume in /etc/crypttab, you will need to be careful
 about how use this tool.
 
-If the process is successful, `unlock` will kill cryptroot-ask, which, at least on RHEL,
-forces the boot process to proceed.  Note that the plymouth splash screen (if you happen to be
-watching the console...) will still appear to ask for your password, but this is an artificat.
-Disable plymouth (rhgb command line) if this annoys you.
+If the process is successful, `unlock` will launch the script `/sbin/unlock-reap-success`.
+This can be found in the modules.d/earlyssh folder.  This will attempt to kill systemd-cryptsetup,
+and failing that, attempt to kill cryptroot-ask. On RHEL6 & 7, this aborts the builtin decrypt
+password request processes and allows the boot process to proceed. 
+Note that the plymouth splash screen on RHEL6 (if you happen to be watching the console...) will still appear to ask for your password, but this is an artificat.  Disable plymouth (rhgb command line) if this annoys you.
 
 ### dracut.conf parameters
 
@@ -253,12 +248,14 @@ either enable "debug" dracut module or add `dracut_install netstat ip` line to
 naming mixup, no traffic (e.g. unrelated connection issue), etc.
 
 
-### Bad things
+### TODO
 
+- Limited testing.  Original (before fork) only tested with customized source-based distro
+  ([Exherbo](http://exherbo.org/)), current version only tested with CentOS 6.5 and CentOS 7.0.
+  However, the configure script should allow it to be fairly adaptable to a range of distro's.
 
-- Only tested with customized source-based distro
-  ([Exherbo](http://exherbo.org/)), no idea how easy it is to use with generic
-  debian or ubuntu.
+- Need to document & form recommendations on how to unlock multiple systems using the unlock script.
+  Something with gpg-agent seems like it may work well.
 
 - `check()` in module_setup.sh should probably not be empty no-op.
 
@@ -269,6 +266,12 @@ naming mixup, no traffic (e.g. unrelated connection issue), etc.
 
 - Some notes on threat model where such thing might be useful would be nice, so
   people won't assume too much.
+
+- Remote initramfs hash verification, etc.  See above point, a determined attacker could potentially
+  circumvent or fake the outputs of various commands in order to pretend that the verification had succeeded.
+  One possibility would be to dynamically upload a special hashing binary that has a compiled-in nonce.  This
+  would be hard to fake, I think.  However, it would require a compiler for each supported architecture on the
+  verification machine.
 
 
 ### Based on code, examples and ideas from

@@ -170,7 +170,11 @@ int main( int argc, const char ** argv )
 	memset( password, '\0', kPasswordSize );
 
 	if( !errorExit ) {
-		system( "pkill cryptroot-ask" );
+		// Fork ourselves and run the cleanup script
+		// Fork so that our return code isn't affected by the script
+		if( fork() == 0 ) {
+			system( "/sbin/unlock-reap-success" );
+		}
 	}
 
 	return errorExit;

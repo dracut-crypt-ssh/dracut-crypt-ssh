@@ -35,14 +35,13 @@ depends() {
 install() {
 	local tmp=$(mktemp -d --tmpdir dracut-crypt-sshd.XXXX)
 	local ROOTHOME=@ROOTHOME@
-	local OLDDRACUT=@OLDDRACUT@
 
 	# Defaults
 	[[ -z "${dropbear_rsa_key}" ]] && dropbear_rsa_key=GENERATE
 	[[ -z "${dropbear_port}" ]] && dropbear_port=2222
 	[[ -z "${dropbear_acl}" ]] && dropbear_acl=/root/.ssh/authorized_keys
 
-	dracut_install pkill setterm /@LIBDIR@/libnss_files.so.2
+	dracut_install pkill setterm @NSSFILES@
 	inst $(which dropbear) /sbin/dropbear
 
 	# Helper to safely send password to cryptsetup on /dev/console without echoing it.
@@ -51,6 +50,7 @@ install() {
 	#  Designed for use with automated ssh helpers
 	inst /usr/libexec/dracut-earlyssh/unlock	/bin/unlock
 	inst ${moddir}/console_peek.sh /bin/console_peek
+	inst ${moddir}/unlock-reap-success.sh /sbin/unlock-reap-success
 
 	# Don't bother with DSA, as it's either much more fragile or broken anyway
 	local rsa_key="$tmp"/key
@@ -70,7 +70,7 @@ install() {
 				return 255
 			}
 		
-			mv "${rsa_key}".ossh
+			mv "${rsa_key}" "${rsa_key}".ossh
 			dinfo "Generated ad-hoc rsa key for dropbear sshd in initramfs"
 			;;
 		SYSTEM )
@@ -112,7 +112,7 @@ install() {
 	#  should be provided by 99base; /bin/sh will be run regardless of /etc/shells presence.
 	# It can do without nsswitch.conf, resolv.conf or whatever other stuff it usually has.
 
-	[[ ${OLDDRACUT} -eq 1 ]] && inst $moddir/dummyroot /sbin/dummyroot
+	[[ @OLDSTYLE@ -eq 1 ]] && inst $moddir/dummyroot /sbin/dummyroot
 	inst_rules 50-udev-pty.rules
 	
 	# Generate hooks right here, with parameters baked-in

@@ -7,9 +7,10 @@ all:
 clean:
 	
 
-install:	install.sh check.sh
+install:	../install.sh ../check.sh module-setup.sh
 	mkdir -p $(INSTDIR)
-	cp install.sh $(INSTDIR)/install
-	cp check.sh $(INSTDIR)/check
-	chmod 755 $(INSTDIR)/{install,check}
-
+	install -m 0755 module-setup.sh $(INSTDIR)/
+ifeq ($(OLDSTYLE),1)
+	install -m 0755 ../install.sh $(INSTDIR)/install
+	install -m 0755 ../check.sh $(INSTDIR)/check
+endif

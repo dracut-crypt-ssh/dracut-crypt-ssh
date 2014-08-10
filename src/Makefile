@@ -14,7 +14,7 @@ clean:
 
 install:	console_auth unlock
 	mkdir -p $(INSTDIR)
-	cp console_auth unlock $(INSTDIR)/
+	install -m 0755 console_auth unlock $(INSTDIR)/
 
 console_auth:	auth.c
 	gcc $(CFLAGS) $^ -o $@

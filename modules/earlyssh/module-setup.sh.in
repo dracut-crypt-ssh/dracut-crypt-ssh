@@ -57,16 +57,13 @@ install() {
 	
 	case ${dropbear_rsa_key} in
 		GENERATE )
-			# I assume ssh-keygen must be better at producing good rsa keys than
-			#  dropbearkey, so use that one. It's interactive-only, hence some hacks.
+			# I assume ssh-keygen from openssh should
+			# be better at producing good rsa keys than dropbearkey, so use that one.
 		
 			rm -f "${rsa_key}" "${rsa_key}".ossh
-			mkfifo "$tmp"/keygen.fifo
-			script -q -c "ssh-keygen -q -t rsa -f '${rsa_key}'; echo >'${tmp}/keygen.fifo'"\
-				/dev/null </dev/null >"$tmp"/keygen.log 2>&1
-			: <"$tmp"/keygen.fifo
+			ssh-keygen -q -t rsa -f "${rsa_key}" -N '' </dev/null
 			[[ -f "${rsa_key}" && -f "${rsa_key}".pub ]] || {
-				derror "Failed to generate ad-hoc rsa key, see: ${tmp}/keygen.log"
+				derror "Failed to generate ad-hoc rsa key with ssh-keygen"
 				return 255
 			}
 		

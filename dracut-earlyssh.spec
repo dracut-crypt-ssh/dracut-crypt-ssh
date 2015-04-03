@@ -1,9 +1,17 @@
 %define gitrepo http://github.com/philfry/%{name}.git
 %define gitrev v%{version}
 
+%if 0%{?el7}%{?fedora}
+%global dracut %{_usr}/lib/dracut
+%endif
+
+%if 0%{?el6}
+%global dracut %{_datadir}/dracut
+%endif
+
 Name: dracut-earlyssh
 Version: 1.0.2
-Release: 5%{?dist}
+Release: 6%{?dist}
 Summary: A dracut module that adds ssh to the boot image (also known as earlyssh)
 Group: System Environment/Base
 License: GPLv2+
@@ -59,15 +67,17 @@ make install DESTDIR=%{buildroot}
 %dir %{_libexecdir}/dracut-earlyssh
 %{_libexecdir}/dracut-earlyssh/unlock
 %{_libexecdir}/dracut-earlyssh/console_auth
-%dir %{_datadir}/dracut/modules.d/60earlyssh
-%{_datadir}/dracut/modules.d/60earlyssh/dummyroot
-%{_datadir}/dracut/modules.d/60earlyssh/check
-%{_datadir}/dracut/modules.d/60earlyssh/install
-%{_datadir}/dracut/modules.d/60earlyssh/module-setup.sh
-%{_datadir}/dracut/modules.d/60earlyssh/console_peek.sh
-%{_datadir}/dracut/modules.d/60earlyssh/unlock-reap-success.sh
-%{_datadir}/dracut/modules.d/60earlyssh/50-udev-pty.rules
-%dir %{_datadir}/dracut/modules.d/91cryptsettle-patch
-%{_datadir}/dracut/modules.d/91cryptsettle-patch/check
-%{_datadir}/dracut/modules.d/91cryptsettle-patch/install
-%{_datadir}/dracut/modules.d/91cryptsettle-patch/module-setup.sh
+%dir %{dracut}/modules.d/60earlyssh
+%{dracut}/modules.d/60earlyssh/module-setup.sh
+%{dracut}/modules.d/60earlyssh/console_peek.sh
+%{dracut}/modules.d/60earlyssh/unlock-reap-success.sh
+%{dracut}/modules.d/60earlyssh/50-udev-pty.rules
+%if 0%{?el6}
+%{dracut}/modules.d/60earlyssh/dummyroot
+%{dracut}/modules.d/60earlyssh/check
+%{dracut}/modules.d/60earlyssh/install
+%dir %{dracut}/modules.d/91cryptsettle-patch
+%{dracut}/modules.d/91cryptsettle-patch/check
+%{dracut}/modules.d/91cryptsettle-patch/install
+%{dracut}/modules.d/91cryptsettle-patch/module-setup.sh
+%endif

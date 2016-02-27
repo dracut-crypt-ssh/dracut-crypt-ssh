@@ -96,8 +96,8 @@ EOF
         inst ${dracut_dropbear_config_file} /etc/dropbear/dropbear.conf
         inst ${dropbear_acl} /root/.ssh/authorized_keys
         inst ${dropbear_rsa_key} ${dropbear_rsa_key}
-        inst_hook initqueue/online 50 "$moddir/start-dropbear.sh"
-        inst_hook cleanup 01 "$moddir/kill-dropbear.sh"
+        inst_hook initqueue/online 50 "$moddir/dropbear-start.sh"
+        inst_hook cleanup 01 "$moddir/dropbear-stop.sh"
 
         inst_script "$moddir/unlock.sh" /bin/unlock           
 

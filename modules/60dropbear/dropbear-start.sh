@@ -11,8 +11,8 @@ info "start-dropbear was called with parameter: $@"
 #this script gets called with parameter enp0s3 then
 
 [ -f /tmp/dropbear.pid ] && {
-info "dropbear already running, calling kill-dropbear.sh first"
-/usr/lib/dracut/hooks/cleanup/01-kill-dropbear.sh ; }
+info "dropbear already running, calling dropbear-stop.sh first"
+/usr/lib/dracut/hooks/cleanup/01-dropbear-stop.sh ; }
 
 [ -f /etc/dropbear/dropbear.conf ] && . /etc/dropbear/dropbear.conf
 
@@ -29,7 +29,7 @@ dropbear -E -m -s -j -k -p ${dropbear_port}\
 [ $? -gt 0 ] && info 'Dropbear sshd failed to start'
 
 #debug
-#emergency_shell -n start-dropbear "Break from 50-start-dropbear.sh in initqueue/online"
-#info "continue 50-start-dropbear.sh"
+#emergency_shell -n start-dropbear "Break from 50-dropbear-start.sh in initqueue/online"
+#info "continue 50-dropbear-start.sh"
 
 exit 0

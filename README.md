@@ -1,4 +1,4 @@
-dracut-earlyssh
+dracut-crypt-ssh
 ---------------
 
 [Dracut initramfs](https://dracut.wiki.kernel.org/index.php/Main_Page) module
@@ -14,7 +14,7 @@ There are a number of reasons why you would want to do this:
 This is based heavily on the work of others, in particular mk-fg.  The major changes between
 this version are: adaption for RHEL 6 and the old version of dracut installed there;
 additional options for replicated the system host key or a user provided one (see the
-"dropbear_rsa_key" option, documented in earlyssh.conf); an additional utility (unlock)
+"dropbear_rsa_key" option, documented in crypt-ssh.conf); an additional utility (unlock)
 for automating the unlock process.  Finally, there is a RPM spec file which should make
 it very easy to deploy (and doesn't introduce a runtime dependency on a compiler).
 
@@ -75,7 +75,7 @@ You will need gcc and libblkid(-devel) installed to build console_auth and the u
   can assign predictable ip and pass proper routes.
 
   On older Dracut versions (e.g. 004 in RHEL6), networking is only configured
-  if you have configured a network root.  In order to work around this, dracut-earlyssh
+  if you have configured a network root.  In order to work around this, dracut-crypt-ssh
   system will install a dummyroot script (if it detects dracut v004 at build-time).
   The cmdline for these versions should be `ip=dhcp netroot=dummy`. 
 
@@ -166,7 +166,7 @@ In short, if you have more than one volume in /etc/crypttab, you will need to be
 about how use this tool.
 
 If the process is successful, `unlock` will launch the script `/sbin/unlock-reap-success`.
-This can be found in the modules.d/earlyssh folder.  This will attempt to kill systemd-cryptsetup,
+This can be found in the modules.d/crypt-ssh folder.  This will attempt to kill systemd-cryptsetup,
 and failing that, attempt to kill cryptroot-ask. On RHEL6 & 7, this aborts the builtin decrypt
 password request processes and allows the boot process to proceed. 
 Note that the plymouth splash screen on RHEL6 (if you happen to be watching the console...) will still appear to ask for your password, but this is an artificat.  Disable plymouth (rhgb command line) if this annoys you.

@@ -1,37 +1,23 @@
-
-export VERSION=1.0.2
-
 include config.mk
 
 export DESTDIR=
 export MODULEDIR=${DESTDIR}/usr/$(DRACUT_MODULEDIR)
 
-SUBDIRS=modules/earlyssh modules/cryptsettle-patch src
-
 ifeq ($(NEED_CRYPTSETTLE),1)
-	CRYPTSETTLE=modules/cryptsettle-patch
+	SUBDIRS=modules/60crypt-ssh modules/cryptsettle-patch
 else
-	CRYPTSETTLE=
+	SUBDIRS=modules/60crypt-ssh
 endif
 
-.PHONY:	src dist $(SUBDIRS)
+.PHONY: install all clean $(SUBDIRS)
 
-all: src $(CRYPTSETTLE) modules/earlyssh
+all: $(SUBDIRS)
 
-install:	src modules/earlyssh $(CRYPTSETTLE)
+install: $(SUBDIRS)
 	mkdir -p $(DESTDIR)/etc/dracut.conf.d/
-	cp earlyssh.conf $(DESTDIR)/etc/dracut.conf.d/
+	cp crypt-ssh.conf $(DESTDIR)/etc/dracut.conf.d/
 
-clean:	src modules/earlyssh modules/cryptsettle-patch
-
-dist:	
-	$(MAKE) clean
-	mkdir -p tmp/dracut-earlyssh-${VERSION}
-	cp -R configure src modules Makefile earlyssh.conf COPYING README.md tmp/dracut-earlyssh-${VERSION}
-	tar -C tmp -czf ../dracut-earlyssh-${VERSION}.tgz dracut-earlyssh-${VERSION}
-	rm -rf tmp
+clean: $(SUBDIRS)
 
 $(SUBDIRS):
 	$(MAKE) -C $@ $(MAKECMDGOALS)
-
-

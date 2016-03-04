@@ -1,0 +1,11 @@
+This project was originally named "dracut-crypt-sshd" and "dracut-earlyssh"
+before it became "dracut-crypt-ssh". It was licensed under version 2.0
+of the WTFPL <http://www.wtfpl.net/txt/copying/>.
+
+The original copyright statement reads as follows:
+  Copyright (C) 2012 Mike Kazantsev <mk.fraggod@gmail.com>
+
+The following contributors agreed to change the license to GPLv2.
+  Michael Curtis <michael@moltenmercury.org>
+  Maciej Żenczykowski <zenczykowski@gmail.com>
+  Artem Sidorenko <artem@2realities.com>

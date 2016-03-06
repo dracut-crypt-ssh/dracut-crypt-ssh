@@ -60,7 +60,7 @@ You will need gcc and libblkid(-devel) installed to build console_auth and the u
 
 - The provided RPM spec file should take care of these things for RHEL6/7
 
-- Add `dracutmodules+="dropbear-sshd"` to dracut.conf
+- Add `dracutmodules+="crypt-ssh"` to dracut.conf
   (will pull in "network" module as dependency).
 
 - Check out supported dracut.conf options below.

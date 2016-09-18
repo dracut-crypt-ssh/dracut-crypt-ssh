@@ -1,5 +1,6 @@
 INSTDIR=$(MODULEDIR)/60crypt-ssh/helper
 CFLAGS=-std=gnu99 -O2 -Wall
+CC=gcc
 
 .PHONY: install all clean test
 
@@ -16,11 +17,11 @@ clean:
 	rm -f *.o console_auth unlock crypttab-test
 
 console_auth:	auth.c
-	gcc $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@
 
 unlock:	crypttab.o unlock.o
-	gcc -lblkid $^ -o $@
+	$(CC) $(CFLAGS) -lblkid $^ -o $@
 
 crypttab-test: crypttab-test.c crypttab.o crypttab-test-data
-	gcc crypttab-test.c $(CFLAGS) crypttab.o -lblkid -o crypttab-test
+	$(CC) crypttab-test.c $(CFLAGS) crypttab.o -lblkid -o crypttab-test
 	./crypttab-test

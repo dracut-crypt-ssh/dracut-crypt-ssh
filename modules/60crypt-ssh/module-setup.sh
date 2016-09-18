@@ -104,7 +104,12 @@ install() {
   rm -rf $tmpDir
   
   #install the required binaries
-  dracut_install pkill setterm /lib64/libnss_files.so.2
+  dracut_install pkill setterm
+  if [ -f /lib$(getconf LONG_BIT)/libnss_files.so.2 ]; then
+    dracut_install /lib$(getconf LONG_BIT)/libnss_files.so.2
+  elif [ -f /lib/libnss_files.so.2 ]; then
+    dracut_install /lib/libnss_files.so.2
+  fi
   inst $(which dropbear) /sbin/dropbear
   #install the required helpers
   inst "$moddir"/helper/console_auth /bin/console_auth

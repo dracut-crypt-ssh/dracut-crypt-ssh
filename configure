@@ -108,7 +108,6 @@ for dir in ${DIRS}; do
 done
 if [[ -z $NSSFILES ]]; then
   echo "not found"
-  exit 1
 else
   echo $NSSFILES
 fi

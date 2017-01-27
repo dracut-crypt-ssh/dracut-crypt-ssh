@@ -169,11 +169,37 @@ The following options are available (see the config file for detailed descriptio
  - `dropbear_rsa_key`, `dropbear_ecdsa_key` (default: `GENERATE`) - Source of the keys, possible options:
    - `SYSTEM` - copy the private keys from the encrypted system (not recommended)
    - `GENERATE` - generate a new keys (during the creation of initramfs)
-   - path - key file in openssh format to use (a public file with '.pub' ending should be present too)
+   - path - key file in OpenSSH format as generared by ssh-keygen (a public file with '.pub' ending must be present too)
  - `dropbear_acl` (default: `/root/.ssh/authorized_keys`) - Keys which allowed to login into initramfs
 
 After any configuration change, you have to rebuild the initramfs as the
 configuration takes effect during the building the initramfs.
+
+## 4.1 Generating keys for dracut-crypt-ssh (recommended)
+
+By default, dracut-crypt-ssh generates an SSH key whenever the image is built
+(`GENERATE`), which either creates administrative overhead or weakens the
+security of the SSH connection as keys will be regenerated transparently during
+system updates. It is highly recommended to generate SSH keys specifically
+for dracut-crypt-ssh and validate these keys during the initial connection.
+The following steps should give you an idea how to set this up. You can change
+the directory as you wish. Keep these SSH keys safe, but also keep in mind that
+they will be copied to the initramfs on the unencrypted boot partition (where
+they may be extracted or changed).
+
+    # umask 0077
+    # mkdir /root/dracut-crypt-ssh-keys
+    # ssh-keygen -t rsa -f /root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key
+    # ssh-keygen -t ecdsa -f /root/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key
+
+Point to these keys in the configuration `/etc/dracut.conf.d/crypt-ssh.conf`:
+
+    dropbear_rsa_key="/root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key"
+    dropbear_ecdsa_key="/root/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key"
+
+Remember regenerate the initramfs after this step:
+
+    # dracut --force
 
 
 # 5. Security warning

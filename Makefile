@@ -1,7 +1,7 @@
 include config.mk
 
 export DESTDIR=
-export MODULEDIR=${DESTDIR}/usr/$(DRACUT_MODULEDIR)
+export MODULEDIR=${DESTDIR}$(DRACUT_MODULEDIR)
 
 ifeq ($(NEED_CRYPTSETTLE),1)
 	SUBDIRS=modules/60crypt-ssh modules/cryptsettle-patch

@@ -46,9 +46,9 @@ echo ${DRACUT_VERSION}
 echo -n "Checking dracut module prefix... "
 DRACUT_MODULEDIR=""
 if [[ -d /usr/lib/dracut/modules.d ]]; then
-	DRACUT_MODULEDIR=lib/dracut/modules.d
+	DRACUT_MODULEDIR=/usr/lib/dracut/modules.d
 elif [[ -d /usr/share/dracut/modules.d ]]; then
-	DRACUT_MODULEDIR=share/dracut/modules.d
+	DRACUT_MODULEDIR=/usr/share/dracut/modules.d
 else
 	echo "failed"
 	exit 1
@@ -56,10 +56,10 @@ fi
 echo ${DRACUT_MODULEDIR}
 
 NEED_CRYPTSETTLE=0
-CRYPTPARSE=/usr/${DRACUT_MODULEDIR}/90crypt/parse-crypt.sh
+CRYPTPARSE=${DRACUT_MODULEDIR}/90crypt/parse-crypt.sh
 if [[ -f $CRYPTPARSE ]]; then
   echo -n "Checking whether crypt-settle patch is needed... "
-  grep -c -- "--settled" ${CRYPTPARSE} >/dev/null
+  grep -q -- "--settled" ${CRYPTPARSE}
   if [[ $? -ne 0 ]]; then
     NEED_CRYPTSETTLE=1
     echo "yes"
@@ -70,7 +70,7 @@ fi
 
 echo -n "Checking for old-style modules... "
 OLDSTYLE=1
-if [[ -f /usr/${DRACUT_MODULEDIR}/99base/module-setup.sh ]]; then
+if [[ -f ${DRACUT_MODULEDIR}/99base/module-setup.sh ]]; then
   OLDSTYLE=0
   echo "no"
 else
@@ -82,7 +82,7 @@ if [[ -z ${ROOTHOME} ]]; then
   ROOTHOME=/
   module=module-setup.sh
   [[ ${OLDSTYLE} -eq 1 ]] && module=install
-  MODULEBASE=/usr/${DRACUT_MODULEDIR}/99base/${module}
+  MODULEBASE=${DRACUT_MODULEDIR}/99base/${module}
   if [[ -f $MODULEBASE ]]; then
     grep -c "root:" ${MODULEBASE} >/dev/null
     if [[ $? -eq 0 ]]; then

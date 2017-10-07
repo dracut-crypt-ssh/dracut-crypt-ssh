@@ -160,6 +160,62 @@ command="unlock" to your authorized_keys before the key, e.g.
 
     command="unlock" ssh-rsa .....
 
+## 3.5. Unlocking with systemd
+
+While the "unlock" program seems to work for others, it doesn't do for
+me on Fedora 27, where it prints "Cannot lock memory. Are you root?".
+
+On Fedora 27, the services supposed to provide the decrypted root will
+timeout (after 1m 30s by default), and the emergency.service will be
+started. Before that happens, the system can be unlocked with the
+`console_auth` program, which provides the LUKS passphrase to the
+passphrase prompt of the console. However, if the timeout already
+occured, `console_auth` will put the passphrase in clear text into the
+emergency shell that was started there.
+
+The proper action is probably to disable the timeout, so the system
+stays at the passphrase prompt forever. Presenting an emergency shell
+might provide a risk for data loss by curious cats.
+
+This is how a system looks like after the timeout caused the emergency
+shell to be started:
+
+```
+-sh-4.4# systemctl list-jobs
+JOB UNIT                                                                                TYPE  STATE
+ 18 cryptsetup.target                                                                   start waiting
+ 19 systemd-cryptsetup@luks\x2*********\x******\x2*****\x2*****\x2*************.service start running
+ 64 emergency.service                                                                   start running
+ 63 emergency.target                                                                    start waiting
+
+4 jobs listed.
+```
+
+With systemd, there is a command `systemd-tty-ask-password-agent` which
+will process all currently pending system password requests by querying
+the user on the calling TTY.
+
+```
+-sh-4.4# systemd-tty-ask-password-agent
+Please enter passphrase for disk ******* (luks-********-****-****-****-************)! *********************
+```
+
+Now we need to get rid of the emergency shell so we can proceed with
+normal boot into default.target:
+
+```
+-sh-4.4# systemctl list-jobs
+JOB UNIT              TYPE  STATE
+ 64 emergency.service start running
+ 63 emergency.target  start waiting
+
+2 jobs listed.
+-sh-4.4# systemctl kill emergency.service
+-sh-4.4# systemctl start default.target
+-sh-4.4# Connection to ***** closed by remote host.
+Connection to ***** closed.
+```
+
 # 4. Configuration
 
 The configuration is stored in the crypt-ssh.conf, usually located in `/etc/dracut.conf.d/`.
@@ -171,6 +227,7 @@ The following options are available (see the config file for detailed descriptio
    - `GENERATE` - generate a new keys (during the creation of initramfs)
    - path - key file in OpenSSH format as generared by ssh-keygen (a public file with '.pub' ending must be present too)
  - `dropbear_acl` (default: `/root/.ssh/authorized_keys`) - Keys which allowed to login into initramfs
+ - `crypt_ssh_use_sshd` (default: not set, `yes` to enable) - Use system sshd instead of dropbear
 
 After any configuration change, you have to rebuild the initramfs as the
 configuration takes effect during the building the initramfs.

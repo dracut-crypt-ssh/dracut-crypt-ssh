@@ -2,8 +2,12 @@
 
 # called by dracut
 check() {
-  #check for dropbear
-  require_binaries dropbear || return 1
+  if [[ "${crypt_ssh_use_sshd}" = "yes" ]]; then
+    require_binaries sshd || return 1
+  else
+    #check for dropbear
+    require_binaries dropbear || return 1
+  fi
   
   return 0
 }
@@ -26,6 +30,9 @@ install() {
   echo -e "#!/bin/bash\n\n" > $genConf
   echo "keyTypes='${keyTypes}'" >> $genConf
   echo "dropbear_port='${dropbear_port}'" >> $genConf
+  if [[ "${crypt_ssh_use_sshd}" = "yes" ]]; then
+    echo "crypt_ssh_use_sshd=yes" >> $genConf
+  fi
 
   #go over different encryption key types
   for keyType in $keyTypes; do
@@ -36,7 +43,12 @@ install() {
 
     local osshKey="${tmpDir}/${keyType}.ossh"
     local dropbearKey="${tmpDir}/${keyType}.dropbear"
-    local installKey="/etc/dropbear/dropbear_${keyType}_host_key"
+    local installKey
+    if [[ "${crypt_ssh_use_sshd}" = "yes" ]]; then
+      installKey="/etc/ssh/ssh_host_${keyType}_key"
+    else
+      installKey="/etc/dropbear/dropbear_${keyType}_host_key"
+    fi
     
     case ${state} in
       GENERATE )
@@ -71,20 +83,24 @@ install() {
         ;;
     esac
     
-    #convert the keys from openssh to dropbear format
-    dropbearconvert openssh dropbear $osshKey $dropbearKey > /dev/null 2>&1 || {
-      derror "dropbearconvert for ${msgKeyType} key failed"
-      rm -rf "$tmpDir"
-      return 1
-    }
+    if [[ "${crypt_ssh_use_sshd}" = "yes" ]]; then
+      inst $osshKey $installKey
+    else
+      #convert the keys from openssh to dropbear format
+      dropbearconvert openssh dropbear $osshKey $dropbearKey > /dev/null 2>&1 || {
+        derror "dropbearconvert for ${msgKeyType} key failed"
+        rm -rf "$tmpDir"
+        return 1
+      }
+      inst $dropbearKey $installKey
+    fi
 
-    #install and show some information
+    #show some information
     local keyFingerprint=$(ssh-keygen -l -f "${osshKey}")
     local keyBubble=$(ssh-keygen -B -f "${osshKey}")
     dinfo "Boot SSH ${msgKeyType} key parameters: "
     dinfo "  fingerprint: ${keyFingerprint}"
     dinfo "  bubblebabble: ${keyBubble}"
-    inst $dropbearKey $installKey
 
     echo "dropbear_${keyType}_fingerprint='$keyFingerprint'" >> $genConf
     echo "dropbear_${keyType}_bubble='$keyBubble'" >> $genConf
@@ -105,7 +121,12 @@ install() {
   
   #install the required binaries
   dracut_install pkill setterm /lib64/libnss_files.so.2
-  inst $(which dropbear) /sbin/dropbear
+  if [[ "${crypt_ssh_use_sshd}" = "yes" ]]; then
+    inst $(which sshd) /sbin/sshd
+    inst "$moddir"/sshd_config /etc/ssh/sshd_config
+  else
+    inst $(which dropbear) /sbin/dropbear
+  fi
   #install the required helpers
   inst "$moddir"/helper/console_auth /bin/console_auth
   inst "$moddir"/helper/console_peek.sh /bin/console_peek

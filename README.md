@@ -21,10 +21,10 @@ Plain text password authentication and port forwarding are disabled.
 # 2. Installation
 
 We recommend installation via packages, or build manually if unavailable.
-You are encouraged to get in contact with us if you are able to provide
-packages for other distributions.
+You are encouraged to get in contact with us via [GitHub issues](https://github.com/dracut-crypt-ssh/dracut-crypt-ssh/issues)
+if you are able to provide packages for other distributions.
 
-## 2.1. Installation from packages
+## 2.1. Installation from packages on Fedora/RHEL/CentOS
 
 We currently provide packages for RHEL+CentOS 7 as well as Fedora 22+
 via a [COPR repository](https://copr.fedorainfracloud.org/coprs/rbu/dracut-crypt-ssh/).
@@ -40,7 +40,7 @@ Installation via yum (CentOS 7):
     # wget -O /etc/yum.repos.d/rbu-dracut-crypt-ssh-epel-7.repo https://copr.fedorainfracloud.org/coprs/rbu/dracut-crypt-ssh/repo/epel-7/rbu-dracut-crypt-ssh-epel-7.repo
     # yum install dracut-crypt-ssh
 
-## 2.2. Installation from sources
+## 2.2. Installation from sources on Fedora/RHEL/CentOS
 
 Install build dependencies (example commands for RPM systems). When building
 on RHEL, be sure to enable EPEL (`yum install epel-release`).
@@ -56,6 +56,10 @@ Retrieve a copy the source and build:
     $ make
     $ sudo make install
 
+## 2.3. Installation on other distributions
+
+- [Gentoo](https://bugs.gentoo.org/617436)
+- [Arch Linux](https://aur.archlinux.org/packages/dracut-crypt-ssh/), [Arch Linux Git](https://aur.archlinux.org/packages/dracut-crypt-ssh-git/)
 
 
 # 3. Usage

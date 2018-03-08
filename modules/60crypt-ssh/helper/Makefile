@@ -1,6 +1,4 @@
 INSTDIR=$(MODULEDIR)/60crypt-ssh/helper
-CFLAGS=-std=gnu99 -O2 -Wall
-CC=gcc
 
 .PHONY: install all clean test
 

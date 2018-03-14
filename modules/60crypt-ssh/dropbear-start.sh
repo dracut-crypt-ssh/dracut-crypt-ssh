@@ -23,7 +23,7 @@ fi
     /sbin/sshd -p ${dropbear_port}
     [ $? -gt 0 ] && info 'sshd failed to start'
   else
-    /sbin/dropbear -m -s -j -k -p ${dropbear_port} -P /tmp/dropbear.pid
+    /sbin/dropbear -s -j -k -p ${dropbear_port} -P /tmp/dropbear.pid
     [ $? -gt 0 ] && info 'Dropbear sshd failed to start'
   fi
 }

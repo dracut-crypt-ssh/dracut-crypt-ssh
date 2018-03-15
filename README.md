@@ -58,7 +58,7 @@ Retrieve a copy the source and build:
 
 ## 2.3. Installation on other distributions
 
-- [Gentoo](https://bugs.gentoo.org/617436)
+- Gentoo: available in Portage, just `emerge sys-kernel/dracut-crypt-ssh`.
 - [Arch Linux](https://aur.archlinux.org/packages/dracut-crypt-ssh/), [Arch Linux Git](https://aur.archlinux.org/packages/dracut-crypt-ssh-git/)
 
 

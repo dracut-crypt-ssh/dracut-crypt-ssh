@@ -262,32 +262,53 @@ Remember regenerate the initramfs after this step:
 
     # dracut --force
 
+# 5. Troubleshooting and Debugging
 
-# 5. Security warning
+If things don't work as expected, there are a few ways to find out what
+is going, get help or report an issue.
 
-The integrity, confidentiality and authenticity of your encrypted data relies
-on the physical integrity of your device. If someone else has access to the
-device that you are unlocking, it is entirely possible to replace the executable
-files handling your key material, or steal your initramfs's SSH private keys.
-Arguably, this kind of attack is possible without the "crypt-ssh" module, but
-using automated or remote access could make such an attack easier to conceal.
+## 5.1 Ensure disk decryption works
 
-If this is a concern for you, consider keeping your devices offline and on
-your person.
+With or without crypt-ssh installed, dracut should always prompt for
+a LUKS password and boot properly when the password is entered. If booting
+with an interactive password does not work, you need to fix that first:
+Ensure that the LUKS UUID configured in GRUB and the crypttab in the initramfs
+are up to date and all modules needed to mount the root filesystem are present
+in the initramfs. 
 
-If this is not a concern for you, i.e. you place a certain amount of trust in
-your hosting provider or physical integrity, this tool might still protect
-against accidental data leaks (i.e. VM deprovisioning, replaced hard disks).
+Refer to the [crypto LUKS documentation of dracut](https://mirrors.edge.kernel.org/pub/linux/utils/boot/dracut/dracut.html#_crypto_luks)
+(`man dracut.cmdline`) and your distribution documentation or help channels.
 
+## 5.2 Ensure networking works (if you have console access)
 
-# 6. Debugging tips
+If you cannot reach the crypt-ssh host via SSH, but you still have
+interactive console access, you can (re)boot it with a dracut breakpoint.
+
+When GRUB presents the boot options, hit the `e` key to edit boot options
+and add `rd.break=pre-mount` to the boot options. Remove `rhgb` and `quiet`
+from the kernel command line, if they are present. Hit `Ctrl-x` to boot
+with the manual configuration and type your LUKS passphrase via the console.
+
+Before mounting the root filesystem, dracut will drop you into a shell.
+Is your network adapter present in `ip a`? If not, does your network adapter
+need a module (check `lsmod` and `dmesg | grep net`)? Do you have an IP address
+configured? Can you use `dhclient` to acquire an IP address? Is `dropbear`
+running (`ps aux`)?
+
+If the network adapter (module) is missing, rebuild the initramfs (`dracut -f`).
+If your network configuration is missing, it's probably a configuration
+issue. Refer to the Usage section for networking parameters. If the network
+comes up, but dracut does not load, that's probably a bug in dracut-crypt-ssh.
+[Please report it](https://github.com/dracut-crypt-ssh/dracut-crypt-ssh/issues).
+
+## 5.3 Debugging a remote host
 
 If (or rather "when") something goes wrong and you can't access just-booted
 machine over network and can't get to console (hence sshd in initramfs), don't
-panic - it's fixable if machine can be rebooted into some rescue system
+panic - it's fixable if the machine can be rebooted into some rescue system
 remotely.
 
-Usually it's some dhcp+tftp netboot thing from co-located machine (good idea to
+Usually it's some dhcp+tftp netboot thing from a co-located machine (good idea to
 setup/test in advance) plus whoever is there occasionally pushing the power
 button, or maybe some fancy hw/interface for that (e.g. hetzner "rescue" interface).
 
@@ -326,3 +347,25 @@ either enable "debug" dracut module or add `dracut_install netstat ip` line to
 "rdsosreport.txt" or console output for whatever netstat + ip commands above
 (for "rdsosreport.sh") show - there can be no default route, whatever interface
 naming mixup, no traffic (e.g. unrelated connection issue), etc.
+
+## 5.4 Report a bug
+
+If you suspect a bug in the software, please [report it via our issue 
+tracker](https://github.com/dracut-crypt-ssh/dracut-crypt-ssh/issues).
+
+
+# 6. Security warning
+
+The integrity, confidentiality and authenticity of your encrypted data relies
+on the physical integrity of your device. If someone else has access to the
+device that you are unlocking, it is entirely possible to replace the executable
+files handling your key material, or steal your initramfs's SSH private keys.
+Arguably, this kind of attack is possible without the "crypt-ssh" module, but
+using automated or remote access could make such an attack easier to conceal.
+
+If this is a concern for you, consider keeping your devices offline and on
+your person.
+
+If this is not a concern for you, i.e. you place a certain amount of trust in
+your hosting provider or physical integrity, this tool might still protect
+against accidental data leaks (i.e. VM deprovisioning, replaced hard disks).

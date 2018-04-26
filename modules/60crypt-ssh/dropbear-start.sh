@@ -12,6 +12,6 @@
     info "  bubblebabble: ${bubble}"
   done
 
-  /sbin/dropbear -m -s -j -k -p ${dropbear_port} -P /tmp/dropbear.pid
+  /sbin/dropbear -s -j -k -p ${dropbear_port} -P /tmp/dropbear.pid
   [ $? -gt 0 ] && info 'Dropbear sshd failed to start'
 }

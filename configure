@@ -99,12 +99,14 @@ echo -n "Checking for libnss_files.so ... "
 DIRS="/usr/lib /usr/lib64 /lib64 /lib"
 NSSFILES=""
 for dir in ${DIRS}; do
-  for check in ${dir}/libnss_files.so*; do
-    if [[ -f $check ]]; then
-      NSSFILES=${check}
-      break
-    fi
-  done
+  if [ -d ${dir} ]; then
+    for check in `/usr/bin/find ${dir} -name 'libnss_files.so*'`; do
+      if [[ -f $check ]]; then
+        NSSFILES=${check}
+        break
+      fi
+    done
+  fi
 done
 if [[ -z $NSSFILES ]]; then
   echo "not found"

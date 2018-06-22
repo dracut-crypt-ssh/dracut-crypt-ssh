@@ -30,8 +30,10 @@ install() {
   #go over different encryption key types
   for keyType in $keyTypes; do
     eval state=\$dropbear_${keyType}_key
+    eval format=\$dropbear_${keyType}_format
     local msgKeyType=$(echo "$keyType" | tr '[:lower:]' '[:upper:]')
 
+    [[ -z "$format" ]] && format=OPENSSH
     [[ -z "$state" ]] && state=GENERATE
 
     local osshKey="${tmpDir}/${keyType}.ossh"
@@ -40,13 +42,33 @@ install() {
     
     case ${state} in
       GENERATE )
-        ssh-keygen -t $keyType -f $osshKey -q -N "" || {
-          derror "SSH ${msgKeyType} key creation failed"
-          rm -rf "$tmpDir"
-          return 1
-        }
-        
+        case ${format} in
+          OPENSSH )
+            ssh-keygen -t $keyType -f $osshKey -q -N "" || {
+              derror "SSH ${msgKeyType} ${format} key creation failed"
+              rm -rf "$tmpDir"
+              return 1
+            }
+            ;;
+          DROPBEAR )
+            dropbearkey -t $keyType -f $dropbearKey || {
+              derror "SSH ${msgKeyType} ${format} key creation failed"
+              rm -rf "$tmpDir"
+              return 1
+            }
+            dropbearkey -y -f $dropbearKey > ${dropbearKey}.pub || {
+              derror "SSH ${msgKeyType} ${format} public key creation failed"
+              rm -rf "$tmpDir"
+              return 1
+            }
+            ;;
+          * )
+            derror "Unknown SSH key format ${format}"
+            return 1
+            ;;
+        esac
         ;;
+
       SYSTEM )
         local sysKey=/etc/ssh/ssh_host_${keyType}_key
         [[ -f ${sysKey} ]] || {
@@ -59,6 +81,7 @@ install() {
         cp ${sysKey}.pub ${osshKey}.pub
         
         ;;
+
       * )
         [[ -f ${state} ]] || {
           derror "Cannot locate a system SSH ${msgKeyType} host key in ${state}"
@@ -66,24 +89,52 @@ install() {
           return 1
         }
         
-        cp $state $osshKey
-        cp ${state}.pub ${osshKey}.pub
+        case ${format} in
+          OPENSSH )
+            cp $state $osshKey
+            cp ${state}.pub ${osshKey}.pub
+            ;;
+          DROPBEAR )
+            cp $state $dropbearKey
+            cp ${state}.pub ${dropbearKey}.pub
+            ;;
+          * )
+            derror "Unknown SSH key format ${format}"
+            return 1
+            ;;
+        esac
         ;;
     esac
     
-    #convert the keys from openssh to dropbear format
-    dropbearconvert openssh dropbear $osshKey $dropbearKey > /dev/null 2>&1 || {
-      derror "dropbearconvert for ${msgKeyType} key failed"
-      rm -rf "$tmpDir"
-      return 1
-    }
+    #convert the keys to dropbear format
+    case ${format} in
+      OPENSSH )
+        dropbearconvert openssh dropbear $osshKey $dropbearKey > /dev/null 2>&1 || {
+          derror "dropbearconvert for ${msgKeyType} key failed"
+          rm -rf "$tmpDir"
+          return 1
+        }
 
-    #install and show some information
-    local keyFingerprint=$(ssh-keygen -l -f "${osshKey}")
-    local keyBubble=$(ssh-keygen -B -f "${osshKey}")
-    dinfo "Boot SSH ${msgKeyType} key parameters: "
-    dinfo "  fingerprint: ${keyFingerprint}"
-    dinfo "  bubblebabble: ${keyBubble}"
+        #show some information
+        local keyFingerprint=$(ssh-keygen -l -f "${osshKey}")
+        local keyBubble=$(ssh-keygen -B -f "${osshKey}")
+        dinfo "Boot SSH ${msgKeyType} key parameters: "
+        dinfo "  fingerprint: ${keyFingerprint}"
+        dinfo "  bubblebabble: ${keyBubble}"
+        ;;
+      DROPBEAR )
+        #show some information
+        local keyPublic=$(dropbearkey -y -f "${dropbearKey}")
+        dinfo "Boot SSH ${msgKeyType} key parameters: "
+        dinfo "  Public key: ${keyPublic}"
+        ;;
+      * )
+        derror "Unknown SSH key format ${format} while converting keys"
+        return 1
+        ;;
+    esac
+
+    #install
     inst $dropbearKey $installKey
 
     echo "dropbear_${keyType}_fingerprint='$keyFingerprint'" >> $genConf
@@ -104,7 +155,16 @@ install() {
   rm -rf $tmpDir
   
   #install the required binaries
-  dracut_install pkill setterm /lib64/libnss_files.so.2
+  DIRS="/usr/lib /usr/lib64 /lib64 /lib"
+  for dir in ${DIRS}; do
+    if [ -d ${dir} ]; then
+      for check in `find ${dir} -name 'libnss_files.so*'`; do
+        dracut_install ${check}
+        break
+      done
+    fi
+  done
+  dracut_install pkill setterm
   inst $(which dropbear) /sbin/dropbear
   #install the required helpers
   inst "$moddir"/helper/console_auth /bin/console_auth

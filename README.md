@@ -48,7 +48,7 @@ on RHEL, be sure to enable EPEL (`yum install epel-release`).
     # yum install dropbear dracut dracut-network openssh
     # yum install libblkid-devel gcc
 
-Retrieve a copy the source and build:
+Retrieve a copy of the source and build:
 
     $ git clone https://github.com/dracut-crypt-ssh/dracut-crypt-ssh.git
     $ cd dracut-crypt-ssh
@@ -56,7 +56,21 @@ Retrieve a copy the source and build:
     $ make
     $ sudo make install
 
-## 2.3. Installation on other distributions
+## 2.3. Installation from sources on Ubuntu
+
+Install build dependencies.
+
+    # sudo apt install dropbear-bin dracut dracut-network openssh-server libblkid-dev gcc
+
+Retrieve a copy of the source and build:
+
+    $ git clone https://github.com/dracut-crypt-ssh/dracut-crypt-ssh.git
+    $ cd dracut-crypt-ssh
+    $ ./configure
+    $ make
+    $ sudo make install
+
+## 2.4. Installation on other distributions
 
 - Gentoo: available in Portage, just `emerge sys-kernel/dracut-crypt-ssh`.
 - [Arch Linux](https://aur.archlinux.org/packages/dracut-crypt-ssh/), [Arch Linux Git](https://aur.archlinux.org/packages/dracut-crypt-ssh-git/)
@@ -172,8 +186,11 @@ The following options are available (see the config file for detailed descriptio
  - `dropbear_port` (default: `222`) - port ssh daemon should listen on
  - `dropbear_rsa_key`, `dropbear_ecdsa_key` (default: `GENERATE`) - Source of the keys, possible options:
    - `SYSTEM` - copy the private keys from the encrypted system (not recommended)
-   - `GENERATE` - generate a new keys (during the creation of initramfs)
+   - `GENERATE` - generate new keys (during the creation of initramfs)
    - path - key file in OpenSSH format as generared by ssh-keygen (a public file with '.pub' ending must be present too)
+ - `dropbear_rsa_format`, `dropbear_ecdsa_format` (default: `OPENSSH`) - Format of the keys, possible options:
+   - `OPENSSH` - key files specified in `dropbear_*_key` are in openssh format and will need conversion (does not work on Ubuntu 18.04 because conversion utility is included in the dropbear package which can't be installed at the same time as dracut)
+   - `DROPBEAR` - key files specified in `dropbear_*_key` are in dropbear format and will not need conversion
  - `dropbear_acl` (default: `/root/.ssh/authorized_keys`) - Keys which allowed to login into initramfs
 
 After any configuration change, you have to rebuild the initramfs as the
@@ -191,6 +208,9 @@ the directory as you wish. Keep these SSH keys safe, but also keep in mind that
 they will be copied to the initramfs on the unencrypted boot partition (where
 they may be extracted or changed).
 
+You can either generate keys in openssh format or directly in dropbear format.
+
+### 4.1.1 Generate openssh keys
     # umask 0077
     # mkdir /root/dracut-crypt-ssh-keys
     # ssh-keygen -t rsa -f /root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key
@@ -200,8 +220,26 @@ Point to these keys in the configuration `/etc/dracut.conf.d/crypt-ssh.conf`:
 
     dropbear_rsa_key="/root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key"
     dropbear_ecdsa_key="/root/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key"
+    dropbear_rsa_format="OPENSSH"
+    dropbear_ecdsa_format="OPENSSH"
 
-Remember regenerate the initramfs after this step:
+### 4.1.2 Generate dropbear keys
+    # umask 0077
+    # mkdir /root/dracut-crypt-ssh-keys
+    # dropbearkey -t rsa -f /root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key
+    # dropbearkey -t rsa -y -f /root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key > /root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key.pub
+    # dropbearkey -t ecdsa -f /root/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key
+    # dropbearkey -t ecdsa -y -f /root/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key > /root/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key.pub
+
+Point to these keys in the configuration `/etc/dracut.conf.d/crypt-ssh.conf`:
+
+    dropbear_rsa_key="/root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key"
+    dropbear_ecdsa_key="/root/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key"
+    dropbear_rsa_format="DROPBEAR"
+    dropbear_ecdsa_format="DROPBEAR"
+
+## 4.2 Regenerate the initramfs
+Remember to regenerate the initramfs after this step:
 
     # dracut --force
 

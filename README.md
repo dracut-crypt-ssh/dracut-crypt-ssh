@@ -89,6 +89,7 @@ Afterwards, regenerate your GRUB config:
 
     # grub2-mkconfig --output /etc/grub2.cfg
 
+Note that you may have write to `/etc/grub2-efi.cfg` on a system that uses EFI.
 
 For a static network configuration, use something along the lines of
 

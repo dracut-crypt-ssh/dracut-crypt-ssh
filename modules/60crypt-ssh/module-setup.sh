@@ -40,7 +40,7 @@ install() {
     
     case ${state} in
       GENERATE )
-        ssh-keygen -t $keyType -f $osshKey -q -N "" || {
+        ssh-keygen -t $keyType -f $osshKey -q -N "" -m PEM || {
           derror "SSH ${msgKeyType} key creation failed"
           rm -rf "$tmpDir"
           return 1

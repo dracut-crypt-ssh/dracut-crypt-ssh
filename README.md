@@ -291,7 +291,13 @@ either enable "debug" dracut module or add `dracut_install netstat ip` line to
 (for "rdsosreport.sh") show - there can be no default route, whatever interface
 naming mixup, no traffic (e.g. unrelated connection issue), etc.
 
-## 5.4 Report a bug
+
+## 5.4 Known limitations
+
+Dropbear does not support ed25519 yet, so keys of this type cannot be used.
+
+
+## 5.5 Report a bug
 
 If you suspect a bug in the software, please [report it via our issue 
 tracker](https://github.com/dracut-crypt-ssh/dracut-crypt-ssh/issues).

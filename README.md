@@ -193,8 +193,8 @@ they may be extracted or changed).
 
     # umask 0077
     # mkdir /root/dracut-crypt-ssh-keys
-    # ssh-keygen -t rsa -f /root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key
-    # ssh-keygen -t ecdsa -f /root/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key
+    # ssh-keygen -t rsa -m PEM -f /root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key
+    # ssh-keygen -t ecdsa -m PEM -f /root/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key
 
 Point to these keys in the configuration `/etc/dracut.conf.d/crypt-ssh.conf`:
 

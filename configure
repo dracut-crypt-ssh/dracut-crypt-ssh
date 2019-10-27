@@ -114,7 +114,7 @@ else
 fi
 
 OLDDRACUT=0
-[[ $DRACUT_VERSION -le 4 ]] && OLDDRACUT=1
+[[ 10#$DRACUT_VERSION -le 4 ]] && OLDDRACUT=1
 
 cat >config.mk <<EOF
 export DRACUT=${DRACUT}

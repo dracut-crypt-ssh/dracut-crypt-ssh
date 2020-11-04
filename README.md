@@ -170,7 +170,8 @@ The configuration is stored in the crypt-ssh.conf, usually located in `/etc/drac
 
 The following options are available (see the config file for detailed description):
  - `dropbear_port` (default: `222`) - port ssh daemon should listen on
- - `dropbear_rsa_key`, `dropbear_ecdsa_key` (default: `GENERATE`) - Source of the keys, possible options:
+ - `dropbear_${keytype}_key`, (default: `GENERATE`) - Source of the keys. `keytype`
+   defaults to `rsa` and `ecdsa`, but you can add others. Possible options:
    - `SYSTEM` - copy the private keys from the encrypted system (not recommended)
    - `GENERATE` - generate a new keys (during the creation of initramfs)
    - path - key file in OpenSSH format as generared by ssh-keygen (a public file with '.pub' ending must be present too)
@@ -190,6 +191,9 @@ The following steps should give you an idea how to set this up. You can change
 the directory as you wish. Keep these SSH keys safe, but also keep in mind that
 they will be copied to the initramfs on the unencrypted boot partition (where
 they may be extracted or changed).
+
+The examples below use `rsa` and `ecdsa`, but you could use additional key types
+such as `ed25519` etc.
 
     # umask 0077
     # mkdir /root/dracut-crypt-ssh-keys

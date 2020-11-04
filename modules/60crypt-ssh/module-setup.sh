@@ -1,4 +1,5 @@
 #!/bin/bash
+# /usr/lib/dracut/modules.d/60crypt-ssh/module-setup.sh
 
 # called by dracut
 check() {
@@ -18,17 +19,21 @@ install() {
   [[ -z "${dropbear_port}" ]] && dropbear_port=222
   [[ -z "${dropbear_acl}" ]] && dropbear_acl=/root/.ssh/authorized_keys
   local tmpDir=$(mktemp -d --tmpdir dracut-crypt-ssh.XXXX)
-  local keyTypes="rsa ecdsa"
+  local keys=( $( compgen -A variable  -X \!dropbear_*_key dropbear || echo dropbear_rsa_key dropbear_ecdsa_key ) )
+  local extglob_before=$(shopt -p extglob )
+  shopt -s extglob
+  local keyTypes=( ${keys[@]//+(dropbear_|_key)/} )
+  eval $extglob_before
   local genConf="${tmpDir}/crypt-ssh.conf"
   local installConf="/etc/crypt-ssh.conf"
 
   #start writing the conf for initramfs include
   echo -e "#!/bin/bash\n\n" > $genConf
-  echo "keyTypes='${keyTypes}'" >> $genConf
+  echo "keyTypes='${keyTypes[@]}'" >> $genConf
   echo "dropbear_port='${dropbear_port}'" >> $genConf
 
   #go over different encryption key types
-  for keyType in $keyTypes; do
+  for keyType in ${keyTypes[@]}; do
     eval state=\$dropbear_${keyType}_key
     local msgKeyType=$(echo "$keyType" | tr '[:lower:]' '[:upper:]')
 

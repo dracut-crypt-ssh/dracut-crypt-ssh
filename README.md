@@ -74,11 +74,23 @@ it is required to rebuild the initramfs:
 
 ## 3.2 Enable network access during boot
 
-Since you need network access before booting from the root partition, you need to configure
-this via GRUB, if you have not done so before.
+You will need to adjust your boot loader to configure network access for your
+initramfs. The kernel and initramfs should be booted with the kernel
+command-line arguments `rd.neednet=1` and an appropriate `ip=` argument for
+your network. For DHCP configuration,
 
-The minimal change is enabling DHCP. Edit the `/etc/default/grub` file and append
-to the end of the `GRUB_CMDLINE_LINUX`:
+    rd.neednet=1 ip=dhcp
+
+should be sufficient. For static configuration, use something like
+
+    rd.neednet=1 ip=192.168.0.100::192.168.0.1:255.255.255.0::eth0:off
+
+Refer to the [network documentation of dracut](https://www.kernel.org/pub/linux/utils/boot/dracut/dracut.html#_network)
+for more options (`man dracut.cmdline`).
+
+For GRUB users, the kernel command-line often can be set in `/etc/default/grub`
+by appending the necessary arguments to the end of the `GRUB_CMDLINE_LINUX`
+variable:
 
     /etc/default/grub:
         ...
@@ -88,14 +100,6 @@ to the end of the `GRUB_CMDLINE_LINUX`:
 Afterwards, regenerate your GRUB config:
 
     # grub2-mkconfig --output /etc/grub2.cfg
-
-
-For a static network configuration, use something along the lines of
-
-    GRUB_CMDLINE_LINUX="... rd.neednet=1 ip=192.168.0.100::192.168.0.1:255.255.255.0:centos:enp0s8:off"
-
-Refer to the [network documentation of dracut](https://www.kernel.org/pub/linux/utils/boot/dracut/dracut.html#_network)
-for more options (`man dracut.cmdline`).
 
 
 ## 3.3. Unlocking the volumes interactively

@@ -94,25 +94,6 @@ else
 fi
 echo ${ROOTHOME}
 
-
-echo -n "Checking for libnss_files.so ... "
-DIRS="/usr/lib /usr/lib64 /lib64 /lib"
-NSSFILES=""
-for dir in ${DIRS}; do
-  for check in ${dir}/libnss_files.so*; do
-    if [[ -f $check ]]; then
-      NSSFILES=${check}
-      break
-    fi
-  done
-done
-if [[ -z $NSSFILES ]]; then
-  echo "not found"
-  exit 1
-else
-  echo $NSSFILES
-fi
-
 cat >config.mk <<EOF
 export DRACUT=${DRACUT}
 export DRACUT_VERSION=${DRACUT_VERSION}
@@ -120,5 +101,4 @@ export DRACUT_MODULEDIR=${DRACUT_MODULEDIR}
 export NEED_CRYPTSETTLE=${NEED_CRYPTSETTLE}
 export ROOTHOME=${ROOTHOME}
 export OLDSTYLE=${OLDSTYLE}
-export NSSFILES=${NSSFILES}
 EOF

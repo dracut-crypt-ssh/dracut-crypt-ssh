@@ -174,7 +174,7 @@ The configuration is stored in the crypt-ssh.conf, usually located in `/etc/drac
 
 The following options are available (see the config file for detailed description):
  - `dropbear_port` (default: `222`) - port ssh daemon should listen on
- - `dropbear_rsa_key`, `dropbear_ecdsa_key` (default: `GENERATE`) - Source of the keys, possible options:
+ - `dropbear_rsa_key`, `dropbear_ecdsa_key`, `dropbear_ed25519_key` (default: `GENERATE`) - Source of the keys, possible options:
    - `SYSTEM` - copy the private keys from the encrypted system (not recommended)
    - `GENERATE` - generate a new keys (during the creation of initramfs)
    - path - key file in OpenSSH format as generared by ssh-keygen (a public file with '.pub' ending must be present too)
@@ -199,11 +199,13 @@ they may be extracted or changed).
     # mkdir /root/dracut-crypt-ssh-keys
     # ssh-keygen -t rsa -f /root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key
     # ssh-keygen -t ecdsa -f /root/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key
+    # ssh-keygen -t ed25519 -f /root/dracut-crypt-ssh-keys/ssh_dracut_ed25519_key
 
 Point to these keys in the configuration `/etc/dracut.conf.d/crypt-ssh.conf`:
 
     dropbear_rsa_key="/root/dracut-crypt-ssh-keys/ssh_dracut_rsa_key"
     dropbear_ecdsa_key="/root/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key"
+    dropbear_ed25519_key="/root/dracut-crypt-ssh-keys/ssh_dracut_ed25519_key"
 
 Remember regenerate the initramfs after this step:
 

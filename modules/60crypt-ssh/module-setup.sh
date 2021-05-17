@@ -104,8 +104,18 @@ install() {
   rm -rf $tmpDir
   
   #install the required binaries
-  dracut_install pkill setterm /lib64/libnss_files.so.2
-  inst $(which dropbear) /sbin/dropbear
+  dracut_install pkill setterm
+  inst_libdir_file "libnss_files*"
+
+  #dropbear should always be in /sbin so the start script works
+  local dropbear
+  if dropbear="$(command -v dropbear 2>/dev/null)"; then
+    inst "${dropbear}" /sbin/dropbear
+  else
+    derror "Unable to locate dropbear executable"
+    return 1
+  fi
+
   #install the required helpers
   inst "$moddir"/helper/console_auth /bin/console_auth
   inst "$moddir"/helper/console_peek.sh /bin/console_peek

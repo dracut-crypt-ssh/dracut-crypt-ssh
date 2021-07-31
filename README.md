@@ -297,7 +297,30 @@ either enable "debug" dracut module or add `dracut_install netstat ip` line to
 (for "rdsosreport.sh") show - there can be no default route, whatever interface
 naming mixup, no traffic (e.g. unrelated connection issue), etc.
 
-## 5.4 Report a bug
+## 5.4 *dracut: dropbearconvert for ED25519 key failed*
+
+In the case that your dropbearconvert does not support ED25519 encryption (e.g CentOS Stream), you will need to install
+dropbear from source upstream of [this PR](https://github.com/mkj/dropbear/pull/91).  
+
+1. Clone and install [dropbear](https://github.com/mkj/dropbear) from source
+2. Ensuring dracut uses the latest version of dropbear:
+   At the end of your `make install` script for dropbear you will note the following lines:
+   ```
+   install dropbear /usr/local/sbin
+   install dbclient /usr/local/bin
+   install dropbearkey /usr/local/bin
+   install dropbearconvert /usr/local/bin
+   ```
+   To ensure that `dracut` uses the latest version of dropbear, we will link these last three to `/usr/local/sbin`
+   ```
+   sudo ln -s /usr/local/bin/dbclient /usr/local/sbin/dbclient
+   sudo ln -s /usr/local/bin/dropbearkey /usr/local/sbin/dropbearkey
+   sudo ln -s /usr/local/bin/dropbearconvert /usr/local/sbin/dropbearconvert
+   ```
+3. Now re-run `dracut --force`
+   
+
+## 5.5 Report a bug
 
 If you suspect a bug in the software, please [report it via our issue 
 tracker](https://github.com/dracut-crypt-ssh/dracut-crypt-ssh/issues).

@@ -168,6 +168,8 @@ command="unlock" to your authorized_keys before the key, e.g.
 
     command="unlock" ssh-rsa .....
 
+> In some cases (CentOS stream) you may wish to replace `unlock` with `systemd-tty-ask-password-agent`
+
 # 4. Configuration
 
 The configuration is stored in the crypt-ssh.conf, usually located in `/etc/dracut.conf.d/`.

@@ -302,21 +302,15 @@ naming mixup, no traffic (e.g. unrelated connection issue), etc.
 In the case that your dropbearconvert does not support ED25519 encryption (e.g CentOS Stream), you will need to install
 dropbear from source upstream of [this PR](https://github.com/mkj/dropbear/pull/91).  
 
-1. Clone and install [dropbear](https://github.com/mkj/dropbear) from source
-2. Ensuring dracut uses the latest version of dropbear:
-   At the end of your `make install` script for dropbear you will note the following lines:
+1. Clone [dropbear git repo](https://github.com/mkj/dropbear)
+
+2. Intsall from source. 
    ```
-   install dropbear /usr/local/sbin
-   install dbclient /usr/local/bin
-   install dropbearkey /usr/local/bin
-   install dropbearconvert /usr/local/bin
+   ./configure --prefix /usr  # sudo has only /sbin:/bin:/usr/sbin:/usr/bin and default prefix is /usr/local
+   make
+   sudo make install
    ```
-   To ensure that `dracut` uses the latest version of dropbear, we will link these last three to `/usr/local/sbin`
-   ```
-   sudo ln -s /usr/local/bin/dbclient /usr/local/sbin/dbclient
-   sudo ln -s /usr/local/bin/dropbearkey /usr/local/sbin/dropbearkey
-   sudo ln -s /usr/local/bin/dropbearconvert /usr/local/sbin/dropbearconvert
-   ```
+
 3. Now re-run `dracut --force`
    
 

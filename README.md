@@ -302,18 +302,25 @@ naming mixup, no traffic (e.g. unrelated connection issue), etc.
 ## 5.4 *dracut: dropbearconvert for ED25519 key failed*
 
 In the case that your dropbearconvert does not support ED25519 encryption (e.g CentOS Stream), you will need to install
-dropbear from source upstream of [this PR](https://github.com/mkj/dropbear/pull/91).  
+dropbear from source upstream of [this PR](https://github.com/mkj/dropbear/pull/91).  We will use the `DROPBEAR_2020.81` tag in the example below.
 
 1. Clone [dropbear git repo](https://github.com/mkj/dropbear)
 
-2. Intsall from source. 
+2. Check out the latest release tag
    ```
-   ./configure --prefix /usr  # sudo has only /sbin:/bin:/usr/sbin:/usr/bin and default prefix is /usr/local
+   git checkout DROPBEAR_2020.81
+   ```
+
+2. Install from source. 
+   ```
+   ./configure 
    make
    sudo make install
    ```
 
 3. Now re-run `dracut --force`
+Since the sudo user only has the following items in path `/sbin:/bin:/usr/sbin:/usr/bin` and our version of dropbear is installed in `/usr/local/bin`, we need to extend the path of the sudo user for this command to ensure the right version of dropbear is used. We can do this with the following command:
+`sudo PATH="/usr/local/bin:$(sudo bash -c 'echo "$PATH"')' dracut --force`
    
 
 ## 5.5 Report a bug

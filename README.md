@@ -319,8 +319,13 @@ dropbear from source upstream of [this PR](https://github.com/mkj/dropbear/pull/
    ```
 
 3. Now re-run `dracut --force`
-Since the sudo user only has the following items in path `/sbin:/bin:/usr/sbin:/usr/bin` and our version of dropbear is installed in `/usr/local/bin`, we need to extend the path of the sudo user for this command to ensure the right version of dropbear is used. We can do this with the following command:
-`sudo PATH="/usr/local/bin:$(sudo bash -c 'echo "$PATH"')' dracut --force`
+
+Since the sudo user only has the following items in path `/sbin:/bin:/usr/sbin:/usr/bin` and our version of dropbear is installed in `/usr/local/bin`, we need to extend the path of the sudo user for this command to ensure the right version of dropbear is used. 
+
+We can do this with the following command:
+```
+sudo PATH="/usr/local/bin:$(sudo bash -c 'echo "$PATH"')' dracut --force
+```
    
 
 ## 5.5 Report a bug

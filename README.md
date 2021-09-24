@@ -20,47 +20,67 @@ Plain text password authentication and port forwarding are disabled.
 
 # 2. Installation
 
-We recommend installation via packages, or build manually if unavailable.
-You are encouraged to get in contact with us via [GitHub issues](https://github.com/dracut-crypt-ssh/dracut-crypt-ssh/issues)
-if you are able to provide packages for other distributions.
+When possible, installation via distribution packages is a convenient way to
+install `dracut-crypt-ssh`. Please contact us via
+[GitHub issues](https://github.com/dracut-crypt-ssh/dracut-crypt-ssh/issues)
+if you are able to provide packages for other distributions and would like
+brief instructions for your distribution included here.
 
-## 2.1. Installation from packages on Fedora/RHEL/CentOS
+## 2.1. Distribution Packages
 
-We currently provide packages for RHEL+CentOS 7 as well as Fedora 22+
-via a [COPR repository](https://copr.fedorainfracloud.org/coprs/rbu/dracut-crypt-ssh/).
+- Void Linux provides an official package:
+  ```sh
+  xbps-install dracut-crypt-ssh
+  ```
 
-Installation via dnf (Fedora):
+- Gentoo provides a package in Portage:
+  ```sh
+  emerge sys-kernel/dracut-crypt-ssh
+  ```
 
-    # dnf copr enable rbu/dracut-crypt-ssh
-    # dnf install dracut-crypt-ssh
+- Arch Linux provides packages in the AUR for both
+  [tagged releases](https://aur.archlinux.org/packages/dracut-crypt-ssh/) and the
+  [git HEAD](https://aur.archlinux.org/packages/dracut-crypt-ssh-git/).
 
-Installation via yum (CentOS 7):
+- A [COPR repository](https://copr.fedorainfracloud.org/coprs/rbu/dracut-crypt-ssh/)
+  provides packages on Fedora 22+:
+  ```sh
+  dnf copr enable rbu/dracut-crypt-ssh
+  dnf install dracut-crypt-ssh
+  ```
+    or on CentOS/RHEL 7:
+  ```sh
+  yum install epel-release
+  wget -O /etc/yum.repos.d/rbu-dracut-crypt-ssh-epel-7.repo https://copr.fedorainfracloud.org/coprs/rbu/dracut-crypt-ssh/repo/epel-7/rbu-dracut-crypt-ssh-epel-7.repo
+  yum install dracut-crypt-ssh
+  ```
 
-    # yum install epel-release
-    # wget -O /etc/yum.repos.d/rbu-dracut-crypt-ssh-epel-7.repo https://copr.fedorainfracloud.org/coprs/rbu/dracut-crypt-ssh/repo/epel-7/rbu-dracut-crypt-ssh-epel-7.repo
-    # yum install dracut-crypt-ssh
+## 2.2. Installation From Sources
 
-## 2.2. Installation from sources on Fedora/RHEL/CentOS
+Manual installation of `dracut-crypt-ssh` requires the following packages at
+run time:
+- [Dropbear SSH](https://matt.ucc.asn.au/dropbear/dropbear.html)
+- [OpenSSH](https://www.openssh.com/)
+- [Dracut](https://mirrors.edge.kernel.org/pub/linux/utils/boot/dracut/dracut.html)
+  and its `dracut-network` module
 
-Install build dependencies (example commands for RPM systems). When building
-on RHEL, be sure to enable EPEL (`yum install epel-release`).
+When building, the following additional packages are required:
+- [util-linux](https://mirrors.edge.kernel.org/pub/linux/utils/util-linux/) and
+  its `libblkid` component, including headers (e.g., `libblkid-devel`)
+- [which](http://savannah.gnu.org/projects/which)
+- A C compiler, probably [GCC](http://gcc.gnu.org/)
 
-    # yum install dropbear dracut dracut-network openssh
-    # yum install libblkid-devel gcc
-
-Retrieve a copy the source and build:
-
-    $ git clone https://github.com/dracut-crypt-ssh/dracut-crypt-ssh.git
-    $ cd dracut-crypt-ssh
-    $ ./configure
-    $ make
-    $ sudo make install
-
-## 2.3. Installation on other distributions
-
-- Gentoo: available in Portage, just `emerge sys-kernel/dracut-crypt-ssh`.
-- [Arch Linux](https://aur.archlinux.org/packages/dracut-crypt-ssh/), [Arch Linux Git](https://aur.archlinux.org/packages/dracut-crypt-ssh-git/)
-
+Retrieve a copy the source, for example via `git` with
+```sh
+git clone https://github.com/dracut-crypt-ssh/dracut-crypt-ssh.git
+```
+Within the source directory, configure and install the package
+```sh
+./configure
+make
+make install
+```
+The `make install` command probably needs to be run as `root`.
 
 # 3. Usage
 
@@ -108,10 +128,10 @@ When rebooting the system, dropbear sshd is started by the initramfs. You should
 be able to login and unlock the volumes:
 
     % ssh -p 222 root@192.168.0.100
-    # console_peek   # to see what's on the console
-    # console_auth   # asks you for the passphrase and sends it to console
-    Passphrase:
 
+You can use the `console_peek` command to see what's currently showing on the
+console and the `console_auth` command to input a passphrase that will be sent
+to the console.
 
 If unlocking the device succeeded, the initramfs will clean up itself
 and dropbear terminates itself and your connection.

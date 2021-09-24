@@ -1,4 +1,5 @@
 #!/bin/bash
+# vim: softtabstop=2 shiftwidth=2 expandtab
 
 # called by dracut
 check() {
@@ -18,17 +19,24 @@ install() {
   [[ -z "${dropbear_port}" ]] && dropbear_port=222
   [[ -z "${dropbear_acl}" ]] && dropbear_acl=/root/.ssh/authorized_keys
   local tmpDir=$(mktemp -d --tmpdir dracut-crypt-ssh.XXXX)
-  local keyTypes="rsa ecdsa ed25519"
   local genConf="${tmpDir}/crypt-ssh.conf"
   local installConf="/etc/crypt-ssh.conf"
 
+  # Make sure dropbear_keytypes has a value and everything is lowercase
+  if [[ -z "${dropbear_keytypes}" ]]; then
+    dropbear_keytypes="rsa ecdsa ed25519"
+  else
+    dropbear_keytypes="$(echo "${dropbear_keytypes}" | tr '[:upper:]' '[:lower:]')"
+  fi
+
   #start writing the conf for initramfs include
   echo -e "#!/bin/bash\n\n" > $genConf
-  echo "keyTypes='${keyTypes}'" >> $genConf
+  echo "keyTypes='${dropbear_keytypes}'" >> $genConf
   echo "dropbear_port='${dropbear_port}'" >> $genConf
 
   #go over different encryption key types
-  for keyType in $keyTypes; do
+  for keyType in $dropbear_keytypes; do
+    keyType=$(echo "$keyType" | tr '[:upper:]' '[:lower:]')
     eval state=\$dropbear_${keyType}_key
     local msgKeyType=$(echo "$keyType" | tr '[:lower:]' '[:upper:]')
 

@@ -194,10 +194,13 @@ The configuration is stored in the crypt-ssh.conf, usually located in `/etc/drac
 
 The following options are available (see the config file for detailed description):
  - `dropbear_port` (default: `222`) - port ssh daemon should listen on
+ - `dropbear_keytypes` (default: `rsa ecdsa ed25519`) - A space-separated list of the SSH key types which will be installed in the initramfs
  - `dropbear_rsa_key`, `dropbear_ecdsa_key`, `dropbear_ed25519_key` (default: `GENERATE`) - Source of the keys, possible options:
    - `SYSTEM` - copy the private keys from the encrypted system (not recommended)
    - `GENERATE` - generate a new keys (during the creation of initramfs)
    - path - key file in OpenSSH format as generared by ssh-keygen (a public file with '.pub' ending must be present too)
+
+   If any key type is not included in `dropbear_keytypes`, the corresponding `dropbear_<type>_key` variable is ignored
  - `dropbear_acl` (default: `/root/.ssh/authorized_keys`) - Keys which allowed to login into initramfs
 
 After any configuration change, you have to rebuild the initramfs as the

@@ -155,6 +155,12 @@ int main( int argc, const char ** argv )
 			NULL
 		};
 
+		if( access( path, X_OK ) != 0 ) {
+			fprintf( stderr, "Could not find %s\n", path );
+			errorExit = 1;
+			break;
+		}
+
 		int result = runchild( password, passwordSize, path, args );
 		if( result ) {
 			fprintf( stderr, "Could not open %s (%s)\n", entry->mapper, entry->real_device );

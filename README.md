@@ -328,16 +328,34 @@ tracker](https://github.com/dracut-crypt-ssh/dracut-crypt-ssh/issues).
 
 # 6. Security warning
 
+Linux 6.2 or greater provides a mechanism for disabling the TIOCSTI ioctl by
+default. Some distributions may ship configurations that take advantage of this
+ability to improve runtime security. The `console_peek` helper shipped with
+this module requires TIOCSTI to function and will, if possible, dynamically
+enable the ioctl on boot. If you would like to disable TIOCSTI after Dracut has
+booted your system, configure your bootprocess to invoke
+
+```sh
+sysctl -w dev.tty.legacy_tiocsti=0
+```
+
+or otherwise write a `0` character to `/proc/sys/dev/tty/legacy_tiocsti`. With
+modern distributions built around systemd, it may be sufficient to run
+
+```sh
+echo "w /proc/sys/dev/tty/legacy_tiocsti - - - - 0" > /etc/tmpfiles.d/tiocsti.conf
+```
+
+and let the `tmpfiles.d` mechanism perform the write as your system is brought up.
+
 The integrity, confidentiality and authenticity of your encrypted data relies
 on the physical integrity of your device. If someone else has access to the
 device that you are unlocking, it is entirely possible to replace the executable
 files handling your key material, or steal your initramfs's SSH private keys.
 Arguably, this kind of attack is possible without the "crypt-ssh" module, but
 using automated or remote access could make such an attack easier to conceal.
-
-If this is a concern for you, consider keeping your devices offline and on
-your person.
-
-If this is not a concern for you, i.e. you place a certain amount of trust in
-your hosting provider or physical integrity, this tool might still protect
-against accidental data leaks (i.e. VM deprovisioning, replaced hard disks).
+If this is a concern for you, consider keeping your devices offline and on your
+person. If this is not a concern for you, *i.e.*, you place a certain amount of
+trust in your hosting provider or physical integrity, this tool might still
+protect against accidental data leaks (i.e. VM deprovisioning, replaced hard
+disks).

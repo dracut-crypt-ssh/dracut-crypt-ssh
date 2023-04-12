@@ -2,6 +2,10 @@
 
 . /etc/crypt-ssh.conf
 
+# Linux >= 6.2 allows the TIOCSTI ioctl to be disabled by default;
+# console_auth requires it, so re-enable using the provided sysctl
+[ -w /proc/sys/dev/tty/legacy_tiocsti ] && echo 1 > /proc/sys/dev/tty/legacy_tiocsti
+
 [ -f /tmp/dropbear.pid ] && kill -0 $(cat /tmp/dropbear.pid) 2>/dev/null || {
   info "sshd port: ${dropbear_port}"
   for keyType in $keyTypes; do

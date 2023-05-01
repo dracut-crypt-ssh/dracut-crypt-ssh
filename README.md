@@ -42,19 +42,6 @@ brief instructions for your distribution included here.
   [tagged releases](https://aur.archlinux.org/packages/dracut-crypt-ssh/) and the
   [git HEAD](https://aur.archlinux.org/packages/dracut-crypt-ssh-git/).
 
-- A [COPR repository](https://copr.fedorainfracloud.org/coprs/rbu/dracut-crypt-ssh/)
-  provides packages on Fedora 22+:
-  ```sh
-  dnf copr enable rbu/dracut-crypt-ssh
-  dnf install dracut-crypt-ssh
-  ```
-    or on CentOS/RHEL 7:
-  ```sh
-  yum install epel-release
-  wget -O /etc/yum.repos.d/rbu-dracut-crypt-ssh-epel-7.repo https://copr.fedorainfracloud.org/coprs/rbu/dracut-crypt-ssh/repo/epel-7/rbu-dracut-crypt-ssh-epel-7.repo
-  yum install dracut-crypt-ssh
-  ```
-
 ## 2.2. Installation From Sources
 
 Manual installation of `dracut-crypt-ssh` requires the following packages at

@@ -42,6 +42,13 @@ brief instructions for your distribution included here.
   [tagged releases](https://aur.archlinux.org/packages/dracut-crypt-ssh/) and the
   [git HEAD](https://aur.archlinux.org/packages/dracut-crypt-ssh-git/).
 
+- An unofficial [COPR repository](https://copr.fedorainfracloud.org/coprs/uriesk/dracut-crypt-ssh/)
+provides packages for Fedora 36+:
+  ```sh
+  dnf copr enable uriesk/dracut-crypt-ssh
+  dnf install dracut-crypt-ssh
+  ```
+
 ## 2.2. Installation From Sources
 
 Manual installation of `dracut-crypt-ssh` requires the following packages at

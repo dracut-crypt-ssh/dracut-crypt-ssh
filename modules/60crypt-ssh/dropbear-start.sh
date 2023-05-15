@@ -4,7 +4,10 @@
 
 # Linux >= 6.2 allows the TIOCSTI ioctl to be disabled by default;
 # console_auth requires it, so re-enable using the provided sysctl
-[ -w /proc/sys/dev/tty/legacy_tiocsti ] && echo 1 > /proc/sys/dev/tty/legacy_tiocsti
+if [ -w /proc/sys/dev/tty/legacy_tiocsti ]; then
+  cp /proc/sys/dev/tty/legacy_tiocsti /tmp/legacy_tiocsti.default >/dev/null 2>&1
+  echo 1 > /proc/sys/dev/tty/legacy_tiocsti
+fi
 
 [ -f /tmp/dropbear.pid ] && kill -0 $(cat /tmp/dropbear.pid) 2>/dev/null || {
   info "sshd port: ${dropbear_port}"

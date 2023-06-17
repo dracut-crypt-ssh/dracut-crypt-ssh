@@ -15,7 +15,7 @@ struct crypttab {
 	int size;
 };
 
-struct crypttab crypttab_parse( const char *filename );
+struct crypttab crypttab_parse( const char * const filename );
 void crypttab_lookupblkids( struct crypttab *list );
 void crypttab_free( struct crypttab *list );
 void crypttab_freeentry( struct crypttab_entry *entry );

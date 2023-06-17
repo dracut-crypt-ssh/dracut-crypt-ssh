@@ -117,7 +117,7 @@ void crypttab_free( struct crypttab *list )
 }
 
 
-struct crypttab crypttab_parse( const char *filename )
+struct crypttab crypttab_parse( const char * const filename )
 {
 	struct crypttab list;
 	char lineBuf[ PATH_MAX ];

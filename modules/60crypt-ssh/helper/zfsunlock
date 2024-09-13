@@ -1,0 +1,14 @@
+#!/bin/sh
+
+if [[ $(zpool list -H -o health) == "ONLINE" ]]; then
+        echo "Found ZFS pool $(zpool list -H -o name)"
+        if zfs load-key -a ; then
+                echo "Pool unlocked, please reconnect later"
+                pkill zfs
+        else
+                echo "Something went wrong... dropping you to a shell"
+        fi
+else
+        echo "No ZFS pool found, dropping you to a shell"
+fi
+

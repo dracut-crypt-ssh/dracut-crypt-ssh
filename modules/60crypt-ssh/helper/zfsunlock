@@ -15,7 +15,7 @@ if [ -e /usr/bin/zfs ] && [ -e /lib/dracut-zfs-lib.sh ] ; then
 
                 # Check if the pool is online
                 if [ "$(zpool list -H -o health "$ZPOOL")" = "ONLINE" ]; then
-                        echo "Found ZFS pool $(zpool list -H -o name)"
+                        echo "Found ZFS pool $(zpool list -H -o name "$ZPOOL")"
 
                         # Invoke Load-key recursively only for the encryption root
                         if zfs load-key -r "$ZCRYPTROOT" ; then

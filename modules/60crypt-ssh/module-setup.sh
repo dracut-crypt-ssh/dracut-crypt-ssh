@@ -106,7 +106,10 @@ install() {
   inst_hook pre-udev 99 "$moddir/dropbear-start.sh"
   inst_hook pre-pivot 05 "$moddir/dropbear-stop.sh"
 
+  #install the authorized_keys file and fix the ownership/permission
   inst "${dropbear_acl}" /root/.ssh/authorized_keys
+  chmod 400 ${initdir}/root/.ssh/authorized_keys
+  chown root:root ${initdir}/root/.ssh/authorized_keys
 
   #cleanup
   rm -rf $tmpDir

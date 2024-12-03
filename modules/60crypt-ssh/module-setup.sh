@@ -109,7 +109,7 @@ install() {
   #install the authorized_keys file and fix the ownership/permission
   inst "${dropbear_acl}" /root/.ssh/authorized_keys
   chmod 400 ${initdir}/root/.ssh/authorized_keys
-  chown root:root ${initdir}/root/.ssh/authorized_keys
+  chown 0:0 ${initdir}/root/.ssh/authorized_keys
 
   #cleanup
   rm -rf $tmpDir

@@ -1,0 +1,37 @@
+#!/bin/sh
+
+
+# Make sure we are using ZFS and the standard zfs module
+if [ -e /usr/bin/zfs ] && [ -e /lib/dracut-zfs-lib.sh ] ; then
+
+        # Source zfs-lib to get the zroot parser, then get encryption root
+        . /lib/dracut-zfs-lib.sh
+        if decode_root_args; then
+
+                ZROOT=$root
+                ZCRYPTROOT="$(zfs get -H -o value encryptionroot "$ZROOT")"
+                # Strip zroot to get zpool
+                ZPOOL="${ZROOT%%/*}"
+
+                # Check if the pool is online
+                if [ "$(zpool list -H -o health "$ZPOOL")" = "ONLINE" ]; then
+                        echo "Found ZFS pool $(zpool list -H -o name "$ZPOOL")"
+
+                        # Invoke Load-key recursively only for the encryption root
+                        if zfs load-key -r "$ZCRYPTROOT" ; then
+                                echo "Pool unlocked, please reconnect later"
+                                # kill the local running (zfs)load-key instance, so we can get on with the boot
+                                pkill zfs
+
+                        else
+                                echo "Something went wrong... dropping you to a shell" >&2
+                        fi
+                else
+                        echo "No ZFS pool found, dropping you to a shell" >&2
+                fi
+        fi
+else
+
+echo "ZFS module was not found. Unable to import pool" >&2
+
+fi

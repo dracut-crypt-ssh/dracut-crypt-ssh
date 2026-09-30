@@ -114,7 +114,7 @@ int main( int argc, const char ** argv )
 		return 1;
 	}
 
-	if( !mlockall( MCL_FUTURE ) ) {
+	if( mlockall( MCL_FUTURE ) != 0 ) {
 		fprintf( stderr, "Warning: Unable to lock memory, are you root?\n" );
 	}
 
